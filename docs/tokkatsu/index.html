@@ -151,6 +151,7 @@ mark{background:var(--tk-ins);color:inherit}
  .tk-steps b{margin-right:8px}.tk-steps li.now{font-weight:700;color:var(--tk-new)}
  .tk-picked,.tk-src{display:none}
  .tk-foot{gap:6px;min-height:0}.tk-foot button{flex:1}
+ #tk-app:not([data-picked]) .tk-foot{display:none}
  .tk-srcm{padding:10px 12px 16px;font-size:14px;color:var(--tk-sub);line-height:1.55}
  .tk-card{max-height:55%}
 }
@@ -337,6 +338,7 @@ function render(){
  $('tk-foot').hidden=S.mode!=='now'&&!S.pick.length;
  const ps=S.pick.map(c=>NOW[c]);
  $('tk-picked').textContent=ps.length?'選んだもの：'+ps.map(label).join('／'):'項目の右の □ を押すと、指導案に写せます';
+ if(ps.length)$('tk-app').dataset.picked='1';else delete $('tk-app').dataset.picked;
  $('tk-clear').disabled=$('tk-copy').disabled=$('tk-send').disabled=!ps.length;
 
  const src=$('tk-list').querySelector('.tk-srcm');if(src)src.remove();
