@@ -343,7 +343,7 @@ function render(){
 
  const src=$('tk-list').querySelector('.tk-srcm');if(src)src.remove();
  $('tk-list').insertAdjacentHTML('beforeend','<div class="tk-srcm tk-sm"></div>');
- $('tk-src').textContent='出典：'+(S.mode==='cmp'?D.src.old+'／':'')+D.src.now+(S.mode==='hist'||S.mode==='next'||S.mode==='term'?'／'+D.src_extra:'');
+ $('tk-src').textContent='作成：伊藤優／出典：'+(S.mode==='cmp'?D.src.old+'／':'')+D.src.now+(S.mode==='hist'||S.mode==='next'||S.mode==='term'?'／'+D.src_extra:'');
  $('tk-list').querySelector('.tk-srcm').textContent=$('tk-src').textContent;
  save();
 }

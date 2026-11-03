@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
+<title>学習指導要領 国語</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* 学習指導要領（国語）を引く画面。データは下の dy-data 1か所。GAS に入れるときは、ここをスプレッドシートから読む形に差しかえる。
+   授業メイトとのつなぎ：#82102D3231400000 のようにコードを付けて開くと、その項目を出す。選んだ項目は postMessage でも渡す。 */
+:root{color-scheme:light;--dy-ink:#22252a;--dy-sub:#4a5260;--dy-line:#d6dbe2;--dy-soft:#f5f7fa;--dy-blue:#1a4fa0;--dy-blue2:#e8eef8;--dy-ok:#166b34;
+ --dy-g:"BIZ UDPGothic","BIZ UDPゴシック","BIZ UDGothic","BIZ UDゴシック","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif}
+html,body{height:100%;margin:0}body{background:#fff;color:var(--dy-ink);font-family:var(--dy-g);font-size:16px;letter-spacing:.03em;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}[hidden]{display:none!important}
+button,input{font:inherit;color:var(--dy-ink)}input{background:#fff}
+button:focus-visible,input:focus-visible{outline:3px solid var(--dy-blue);outline-offset:2px}
+#dy-app{height:100%;display:flex;flex-direction:column;gap:6px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1400px;margin:0 auto}
+#dy-app button{min-height:44px;min-width:44px;border:1px solid #9aa3ad;border-radius:8px;background:#fff;padding:6px 12px;cursor:pointer;white-space:nowrap}
+#dy-app button[aria-pressed=true]{background:var(--dy-blue2);border-color:var(--dy-blue);color:var(--dy-blue);font-weight:700}
+#dy-app button.dy-main{background:var(--dy-blue);border-color:var(--dy-blue);color:#fff;font-weight:700}
+#dy-app button:disabled{opacity:.45;cursor:default}
+/* 上：名前・学年・系統・さがす */
+.dy-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dy-head h1{margin:0 6px 0 0;font-size:20px;font-weight:700;white-space:nowrap}
+.dy-seg{display:flex;border:1px solid #9aa3ad;border-radius:8px;overflow:hidden}
+#dy-app .dy-seg button{border:0;border-radius:0;border-right:1px solid var(--dy-line);padding:6px 10px}#dy-app .dy-seg button:last-child{border-right:0}
+.dy-sp{flex:1}
+.dy-find{flex:none;display:flex;align-items:center;gap:4px;border:1px solid #9aa3ad;border-radius:8px;padding:0 4px 0 10px;min-height:44px;width:100%}
+.dy-find input{border:0;outline:0;flex:1;min-width:0;min-height:40px;font-size:15px}
+#dy-app .dy-find button{border:0;min-width:40px;padding:0;color:var(--dy-sub)}
+.dy-ic{width:20px;height:20px;flex:none;vertical-align:-4px}
+/* 中：左に領域、右に事項 */
+.dy-body{flex:1;min-height:0;display:flex;gap:10px}
+.dy-side{flex:0 0 220px;min-height:0;display:flex;flex-direction:column;gap:6px}
+.dy-nav{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.dy-nav h2{margin:6px 0 2px;font-size:15px;color:var(--dy-sub);font-weight:700}
+#dy-app .dy-nav button{flex:none;text-align:left;border-color:transparent;white-space:normal;line-height:1.3;padding:6px 10px}
+#dy-app .dy-nav button[aria-pressed=true]{border-color:var(--dy-blue)}
+.dy-pane{flex:1;min-width:0;display:flex;flex-direction:column;border:1px solid var(--dy-line);border-radius:8px;overflow:hidden}
+.dy-ttl{display:flex;align-items:baseline;gap:10px;padding:8px 12px;border-bottom:1px solid var(--dy-line);background:var(--dy-soft)}
+.dy-ttl b{font-size:18px}.dy-ttl span{font-size:15px;color:var(--dy-sub)}
+.dy-list{flex:1;min-height:0;overflow:auto}
+.dy-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.dy-cols>*{min-width:0;border-right:1px solid var(--dy-line)}.dy-cols>*:nth-child(3n){border-right:0}
+#dy-app .dy-cols .dy-it{height:100%}
+.dy-cols .dy-sub,.dy-cols .dy-goal{grid-column:span 1}.dy-cols .dy-subrow{grid-column:1/-1;border-right:0}
+.dy-empty{border-bottom:1px solid var(--dy-line);background:var(--dy-soft)}
+.dy-colh{position:sticky;top:0;z-index:1;background:#fff;padding:6px 12px;font-weight:700;font-size:16px;border-bottom:1px solid var(--dy-line)}
+.dy-colh.now{color:var(--dy-blue)}
+.dy-sub{padding:8px 12px 2px;font-size:15px;color:var(--dy-sub);font-weight:700}
+/* 1つの項目：押すと選ぶ（✓が付く） */
+#dy-app .dy-it{display:grid;min-height:44px;border-radius:0;white-space:normal;grid-template-columns:28px 1fr 24px;gap:6px;align-items:start;width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--dy-line);padding:10px 12px;cursor:pointer;line-height:1.75;font-size:16px;color:var(--dy-ink)}
+#dy-app .dy-it:hover{background:var(--dy-soft)}
+.dy-it .k{font-weight:700;color:var(--dy-blue);padding-top:1px}
+.dy-it .ck{width:22px;height:22px;border:2px solid #9aa3ad;border-radius:4px;margin-top:2px;display:flex;align-items:center;justify-content:center}
+#dy-app .dy-it[aria-pressed=true]{background:var(--dy-blue2);font-weight:400;color:var(--dy-ink)}
+.dy-it[aria-pressed=true] .ck{background:var(--dy-blue);border-color:var(--dy-blue)}
+.dy-it[aria-pressed=true] .ck::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg);margin-top:-3px}
+.dy-it.hit{outline:3px solid #b8860b;outline-offset:-3px}
+.dy-it .w{font-size:15px;color:var(--dy-sub);display:block}
+.dy-it ol{margin:4px 0 0;padding-left:0;list-style:none}.dy-it li{font-size:14px}
+.dy-act .dy-it{color:#3b4250}
+.dy-goal{padding:10px 12px;border-bottom:1px solid var(--dy-line);line-height:1.8}
+.dy-goal p{margin:0 0 6px}
+/* 指導事項の下：扱う単元（光村） */
+.dy-it .u{display:block;font-size:15px;color:var(--dy-sub);margin-top:2px;line-height:1.6}
+/* 単元から：左に単元の一覧、右にその単元で目指すこと */
+#dy-app .dy-nav .dy-un{display:block;border:1px solid #9aa3ad;margin-bottom:4px;padding:6px 10px}#dy-app .dy-nav .dy-un:hover{background:var(--dy-soft)}#dy-app .dy-nav .dy-un[aria-pressed=true]{border:2px solid var(--dy-blue);padding:5px 9px}.dy-un small{display:block;font-size:14px;color:var(--dy-sub)}
+.dy-unit{padding:8px 12px;border-bottom:1px solid var(--dy-line);font-size:17px;font-weight:700;line-height:1.6}
+.dy-unit small{display:block;font-weight:400;font-size:14px;color:var(--dy-sub)}
+.dy-mk{display:inline-block;min-width:4.2em;font-weight:700;font-size:15px;color:var(--dy-sub)}
+.dy-mk.on{color:var(--dy-blue)}
+#dy-app .dy-aim{grid-template-columns:4.8em 1fr 24px}.dy-aim .t{display:block}.dy-aim .w{font-size:15px;color:var(--dy-sub)}
+.dy-aim.main .t{font-weight:700}
+.dy-go{color:var(--dy-sub);font-size:18px;padding-top:2px}
+.dy-li{padding:10px 12px;border-bottom:1px solid var(--dy-line);line-height:1.75}
+/* 目指す力の印：字＋枠。◎重点は塗り、○は線だけ（色だけで伝えない） */
+:root{--dy-A:#9a4310;--dy-B:#17653a;--dy-C:#1a4fa0;--dy-K:#6a3d9a}
+.dy-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.dy-tag{display:inline-flex;align-items:center;gap:1px;border:1.5px solid currentColor;border-radius:6px;padding:0 6px;font-size:14px;line-height:22px;font-weight:700;background:#fff}
+.dy-tag.A{color:var(--dy-A)}.dy-tag.B{color:var(--dy-B)}.dy-tag.C{color:var(--dy-C)}.dy-tag.K{color:var(--dy-K)}
+.dy-tag.on.A{background:var(--dy-A);border-color:var(--dy-A);color:#fff}.dy-tag.on.B{background:var(--dy-B);border-color:var(--dy-B);color:#fff}
+.dy-tag.on.C{background:var(--dy-C);border-color:var(--dy-C);color:#fff}.dy-tag.on.K{background:var(--dy-K);border-color:var(--dy-K);color:#fff}
+.dy-un .h{font-size:14px;color:var(--dy-sub);font-weight:400;margin-left:4px;white-space:nowrap}
+/* 1年の地図：よこに月、たてに領域。学期で切りかえ */
+.dy-mapbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dy-legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--dy-sub)}
+.dy-map{display:grid;min-width:0;grid-template-columns:repeat(var(--dy-n),minmax(0,1fr));grid-template-rows:auto 1fr;grid-auto-flow:column}
+.dy-map>*{border-right:1px solid var(--dy-line);border-bottom:1px solid var(--dy-line);min-width:0;padding:6px}
+.dy-mh{font-weight:700;text-align:center;background:var(--dy-soft);padding:6px}
+.dy-rh{font-weight:700;display:flex;flex-direction:column;justify-content:center;gap:2px;background:var(--dy-soft)}
+.dy-rh small{font-size:14px;font-weight:400;color:var(--dy-sub)}
+.dy-cell{display:flex;flex-direction:column;gap:4px}
+#dy-app .dy-chip{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;width:100%;min-height:44px;padding:3px 8px;border:1px solid #9aa3ad;border-radius:8px;background:#fff;white-space:normal;text-align:left;line-height:1.35;font-size:15px;color:var(--dy-ink)}
+#dy-app .dy-chip:hover{background:var(--dy-soft)}
+.dy-chip .h{font-size:14px;color:var(--dy-sub);margin-left:4px;white-space:nowrap}
+.dy-chip .dy-tags{margin-top:0;flex-wrap:nowrap}
+.dy-map{position:relative}.dy-mh{position:sticky;top:0;z-index:1}
+:root{--dy-new:#8a4b00;--dy-new2:#fff3df;--dy-ins:#fff0a8}
+/* 前回とくらべる：左に前回、右にいま */
+.dy-cmpg{display:grid;grid-template-columns:1fr 1fr}
+.dy-cmpg>div{min-width:0;padding:8px 12px;border-bottom:1px solid var(--dy-line);line-height:1.75}
+.dy-cmpg>div:nth-child(odd){border-right:1px solid var(--dy-line)}
+.dy-cmpg .dy-colh2{position:sticky;top:0;z-index:1;background:#fff;font-weight:700;line-height:1.5}
+.dy-cmpg .dy-note{grid-column:1/-1;border-right:0!important;background:var(--dy-soft);font-size:15px;line-height:1.6}
+.dy-cmpg .dy-sub{grid-column:1/-1;border-right:0!important}
+.dy-cmpg .k{font-weight:700;color:var(--dy-blue);margin-right:6px}
+.dy-x{color:var(--dy-sub);font-size:15px}
+.dy-flag{display:inline-block;font-size:14px;font-weight:700;border:1.5px solid var(--dy-new);color:var(--dy-new);background:var(--dy-new2);border-radius:6px;padding:0 6px;margin-right:6px;line-height:22px}
+del{text-decoration:line-through 2px;color:#5d636c}
+ins{text-decoration:underline 2px;text-underline-offset:3px;background:var(--dy-ins)}
+/* 歩み：年を横、柱を縦の帯に。帯が切れた所が変わった所 */
+.dy-fig{padding:10px 12px;overflow-x:auto}
+.dy-fg{display:grid;grid-template-columns:76px repeat(var(--dy-n),minmax(62px,1fr));gap:6px 3px;min-width:740px;align-items:stretch}
+.dy-fg .yh{font-weight:700;text-align:center;font-size:15px;line-height:1.3;padding-bottom:2px;border-bottom:2px solid var(--dy-line)}
+.dy-fg .yh small{display:block;font-size:14px;font-weight:400;color:var(--dy-sub)}
+.dy-fg .yh.now{color:var(--dy-blue);border-color:var(--dy-blue)}.dy-fg .yh.next{color:var(--dy-new);border-color:var(--dy-new)}
+.dy-fg .ln{font-weight:700;font-size:15px;display:flex;align-items:center}
+#dy-app .dy-fg .sg{min-height:52px;white-space:normal;line-height:1.35;font-size:14px;padding:4px 6px;border-radius:6px;border:1px solid #8fa6c8;background:var(--dy-blue2);color:var(--dy-ink);text-align:center}
+#dy-app .dy-fg .sg.nx{border:2px dashed var(--dy-new);background:#fff}
+#dy-app .dy-fg .sg.em{border:1px dashed var(--dy-line);background:#fff;color:var(--dy-sub)}
+#dy-app .dy-fg .sg.nm{background:#fff;border-color:var(--dy-ink);font-weight:700}
+.dy-fgk{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--dy-sub);margin-top:10px}
+.dy-fgk i{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px;border:1px solid #8fa6c8;background:var(--dy-blue2)}
+.dy-fgk i.nx{border:2px dashed var(--dy-new);background:#fff}
+.dy-y{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:10px 12px;border-bottom:1px solid var(--dy-line)}
+.dy-y.now{background:var(--dy-blue2)}.dy-y.hl{outline:3px solid #b8860b;outline-offset:-3px}
+.dy-y .yy{font-size:22px;font-weight:700;line-height:1.2}.dy-y .yy small{display:block;font-size:14px;font-weight:400;color:var(--dy-sub)}
+.dy-y h3{margin:0;font-size:17px}.dy-y ul{margin:4px 0 0;padding-left:1.2em}
+.dy-chips2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.dy-chips2 span{font-size:14px;border:1px solid var(--dy-line);border-radius:4px;padding:0 6px;background:#fff}
+.dy-y a,.dy-nx a{color:var(--dy-blue);font-size:14px}
+.dy-nx{padding:8px 12px;border-bottom:1px solid var(--dy-line);line-height:1.7}.dy-nx .d{font-size:14px;color:var(--dy-sub)}
+.dy-lead{padding:10px 12px;border-bottom:1px solid var(--dy-line);background:var(--dy-soft);line-height:1.7}
+.dy-steps{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--dy-line)}
+.dy-steps span{font-size:14px;border:1px solid var(--dy-line);border-radius:6px;padding:4px 8px;background:#fff}.dy-steps span.now{border:2px solid var(--dy-new);font-weight:700}
+.dy-sp2{flex:1}
+.dy-empty2{color:var(--dy-sub);font-size:14px;text-align:center;padding-top:10px}
+mark{background:#fff0a8;color:inherit}
+.dy-none{padding:16px;color:var(--dy-sub)}
+/* 下：選んだもの */
+.dy-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:48px}
+.dy-picked{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--dy-sub);font-size:14px}
+.dy-src{font-size:14px;color:var(--dy-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dy-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:var(--dy-ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:15px}
+/* せまい画面（iPhone・たて）：左の領域は上の横ならびに */
+@media (max-width:760px){
+ .dy-body{flex-direction:column}
+ .dy-seg{overflow-x:auto;max-width:100%}#dy-app .dy-seg button{flex:none}.dy-ttl{flex-wrap:wrap}
+ .dy-side{flex:none}.dy-nav{flex:none;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:2px}.dy-nav h2{display:none}
+ #dy-app .dy-nav button{flex:none;white-space:nowrap;border-color:var(--dy-line)}
+ .dy-cols{grid-template-columns:1fr}.dy-col{border-right:0}
+ .dy-find{width:100%}
+ #dy-app .dy-aim{grid-template-columns:3.6em 1fr 12px;padding:10px 8px}.dy-mk{min-width:0}
+ .dy-map{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}.dy-map>*{border-right:0}.dy-mh{text-align:left}
+}
+</style></head><body>
+<div id="dy-app">
+ <div class="dy-head">
+  <h1>学習指導要領　国語</h1>
+  <div class="dy-seg" id="dy-mode" role="group" aria-label="見かた"><button data-m="unit">単元</button><button data-m="map">1年の地図</button><button data-m="yoryo">指導事項</button><button data-m="cmp">前回とくらべる</button><button data-m="hist">歩み</button></div>
+  <div class="dy-seg" id="dy-band" role="group" aria-label="学年"></div>
+  <button id="dy-kei" aria-pressed="false" title="1年から6年まで ならべる"><svg class="dy-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="16" rx="1"/><rect x="17" y="4" width="4" height="16" rx="1"/></svg> 系統</button>
+ </div>
+ <div class="dy-body">
+  <div class="dy-side" id="dy-side">
+   <label class="dy-find"><svg class="dy-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="dy-q" type="search" placeholder="ことばで さがす" aria-label="ことばで さがす"><button id="dy-qx" hidden aria-label="けす">×</button></label>
+   <nav class="dy-nav" id="dy-nav" aria-label="えらぶ"></nav>
+  </div>
+  <section class="dy-pane"><div class="dy-ttl" id="dy-ttl"></div><div class="dy-list" id="dy-list"></div></section>
+ </div>
+ <div class="dy-foot">
+  <span class="dy-picked" id="dy-picked"></span>
+  <button id="dy-clear" disabled>はずす</button>
+  <button id="dy-copy" disabled><svg class="dy-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg> 写す</button>
+  <button id="dy-send" class="dy-main" disabled>授業メイトへ</button>
+ </div>
+ <div class="dy-src" id="dy-src"></div>
+</div>
+<div class="dy-toast" id="dy-toast" hidden role="status"></div>
+<script type="application/json" id="dy-data">{"src":"小学校学習指導要領（平成29年告示）国語　学習指導要領コード【82V12】Ver1.2（文部科学省）","src_chu":"中学校学習指導要領（平成29年告示）国語　学習指導要領コード【83V11】Ver1.1（文部科学省）","src_old":"小学校学習指導要領（平成20年告示・平成27年一部改正）国語　学習指導要領コード【72V21】Ver2.1（文部科学省）","bands":{"12":{"mokuhyo":[{"c":"82102A2100000000","t":"日常生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"82102A2200000000","t":"順序立てて考える力や感じたり想像したりする力を養い，日常生活における人との関わりの中で伝え合う力を高め，自分の思いや考えをもつことができるようにする。"},{"c":"82102A2300000000","t":"言葉がもつよさを感じるとともに，楽しんで読書をし，国語を大切にして，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"82102A3111000000","area":"知1","kind":"jiko","k":"ア","t":"言葉には，事物の内容を表す働きや，経験したことを伝える働きがあることに気付くこと。"},{"c":"82102A3112000000","area":"知1","kind":"jiko","k":"イ","t":"音節と文字との関係，アクセントによる語の意味の違いなどに気付くとともに，姿勢や口形，発声や発音に注意して話すこと。"},{"c":"82102A3113000000","area":"知1","kind":"jiko","k":"ウ","t":"長音，拗音，促音，撥音などの表記，助詞の「は」，「へ」及び「を」の使い方，句読点の打ち方，かぎ（「　」）の使い方を理解して文や文章の中で使うこと。また，平仮名及び片仮名を読み，書くとともに，片仮名で書く語の種類を知り，文や文章の中で使うこと。"},{"c":"82102A3114000000","area":"知1","kind":"jiko","k":"エ","t":"第１学年においては，別表の学年別漢字配当表（以下「学年別漢字配当表」という。）の第１学年に配当されている漢字を読み，漸次書き，文や文章の中で使うこと。第２学年においては，学年別漢字配当表の第２学年までに配当されている漢字を読むこと。また，第１学年に配当されている漢字を書き，文や文章の中で使うとともに，第２学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"82102A3115000000","area":"知1","kind":"jiko","k":"オ","t":"身近なことを表す語句の量を増し，話や文章の中で使うとともに，言葉には意味による語句のまとまりがあることに気付き，語彙を豊かにすること。"},{"c":"82102A3116000000","area":"知1","kind":"jiko","k":"カ","t":"文の中における主語と述語との関係に気付くこと。"},{"c":"82102A3117000000","area":"知1","kind":"jiko","k":"キ","t":"丁寧な言葉と普通の言葉との違いに気を付けて使うとともに，敬体で書かれた文章に慣れること。"},{"c":"82102A3118000000","area":"知1","kind":"jiko","k":"ク","t":"語のまとまりや言葉の響きなどに気を付けて音読すること。"},{"c":"82102A3121000000","area":"知2","kind":"jiko","k":"ア","t":"共通，相違，事柄の順序など情報と情報との関係について理解すること。"},{"c":"82102A3131000000","area":"知3","kind":"jiko","k":"ア","t":"昔話や神話・伝承などの読み聞かせを聞くなどして，我が国の伝統的な言語文化に親しむこと。"},{"c":"82102A3132000000","area":"知3","kind":"jiko","k":"イ","t":"長く親しまれている言葉遊びを通して，言葉の豊かさに気付くこと。"},{"c":"82102A3133000000","area":"知3","kind":"jiko","k":"ウ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"82102A3133100000","k":"ア","t":"姿勢や筆記具の持ち方を正しくして書くこと。"},{"c":"82102A3133200000","k":"イ","t":"点画の書き方や文字の形に注意しながら，筆順に従って丁寧に書くこと。"},{"c":"82102A3133300000","k":"ウ","t":"点画相互の接し方や交わり方，長短や方向などに注意して，文字を正しく書くこと。"}]},{"c":"82102A3134000000","area":"知3","kind":"jiko","k":"エ","t":"読書に親しみ，いろいろな本があることを知ること。"},{"c":"82102A3211100000","area":"A","kind":"jiko","k":"ア","t":"身近なことや経験したことなどから話題を決め，伝え合うために必要な事柄を選ぶこと。"},{"c":"82102A3211200000","area":"A","kind":"jiko","k":"イ","t":"相手に伝わるように，行動したことや経験したことに基づいて，話す事柄の順序を考えること。"},{"c":"82102A3211300000","area":"A","kind":"jiko","k":"ウ","t":"伝えたい事柄や相手に応じて，声の大きさや速さなどを工夫すること。"},{"c":"82102A3211400000","area":"A","kind":"jiko","k":"エ","t":"話し手が知らせたいことや自分が聞きたいことを落とさないように集中して聞き，話の内容を捉えて感想をもつこと。"},{"c":"82102A3211500000","area":"A","kind":"jiko","k":"オ","t":"互いの話に関心をもち，相手の発言を受けて話をつなぐこと。"},{"c":"82102A3212100000","area":"A","kind":"act","k":"ア","t":"紹介や説明，報告など伝えたいことを話したり，それらを聞いて声に出して確かめたり感想を述べたりする活動。"},{"c":"82102A3212200000","area":"A","kind":"act","k":"イ","t":"尋ねたり応答したりするなどして，少人数で話し合う活動。"},{"c":"82102A3221100000","area":"B","kind":"jiko","k":"ア","t":"経験したことや想像したことなどから書くことを見付け，必要な事柄を集めたり確かめたりして，伝えたいことを明確にすること。"},{"c":"82102A3221200000","area":"B","kind":"jiko","k":"イ","t":"自分の思いや考えが明確になるように，事柄の順序に沿って簡単な構成を考えること。"},{"c":"82102A3221300000","area":"B","kind":"jiko","k":"ウ","t":"語と語や文と文との続き方に注意しながら，内容のまとまりが分かるように書き表し方を工夫すること。"},{"c":"82102A3221400000","area":"B","kind":"jiko","k":"エ","t":"文章を読み返す習慣を付けるとともに，間違いを正したり，語と語や文と文との続き方を確かめたりすること。"},{"c":"82102A3221500000","area":"B","kind":"jiko","k":"オ","t":"文章に対する感想を伝え合い，自分の文章の内容や表現のよいところを見付けること。"},{"c":"82102A3222100000","area":"B","kind":"act","k":"ア","t":"身近なことや経験したことを報告したり，観察したことを記録したりするなど，見聞きしたことを書く活動。"},{"c":"82102A3222200000","area":"B","kind":"act","k":"イ","t":"日記や手紙を書くなど，思ったことや伝えたいことを書く活動。"},{"c":"82102A3222300000","area":"B","kind":"act","k":"ウ","t":"簡単な物語をつくるなど，感じたことや想像したことを書く活動。"},{"c":"82102A3231100000","area":"C","kind":"jiko","k":"ア","t":"時間的な順序や事柄の順序などを考えながら，内容の大体を捉えること。"},{"c":"82102A3231200000","area":"C","kind":"jiko","k":"イ","t":"場面の様子や登場人物の行動など，内容の大体を捉えること。"},{"c":"82102A3231300000","area":"C","kind":"jiko","k":"ウ","t":"文章の中の重要な語や文を考えて選び出すこと。"},{"c":"82102A3231400000","area":"C","kind":"jiko","k":"エ","t":"場面の様子に着目して，登場人物の行動を具体的に想像すること。"},{"c":"82102A3231500000","area":"C","kind":"jiko","k":"オ","t":"文章の内容と自分の体験とを結び付けて，感想をもつこと。"},{"c":"82102A3231600000","area":"C","kind":"jiko","k":"カ","t":"文章を読んで感じたことや分かったことを共有すること。"},{"c":"82102A3232100000","area":"C","kind":"act","k":"ア","t":"事物の仕組みを説明した文章などを読み，分かったことや考えたことを述べる活動。"},{"c":"82102A3232200000","area":"C","kind":"act","k":"イ","t":"読み聞かせを聞いたり物語などを読んだりして，内容や感想などを伝え合ったり，演じたりする活動。"},{"c":"82102A3232300000","area":"C","kind":"act","k":"ウ","t":"学校図書館などを利用し，図鑑や科学的なことについて書いた本などを読み，分かったことなどを説明する活動。"}]},"34":{"mokuhyo":[{"c":"82102C2100000000","t":"日常生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"82102C2200000000","t":"筋道立てて考える力や豊かに感じたり想像したりする力を養い，日常生活における人との関わりの中で伝え合う力を高め，自分の思いや考えをまとめることができるようにする。"},{"c":"82102C2300000000","t":"言葉がもつよさに気付くとともに，幅広く読書をし，国語を大切にして，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"82102C3111000000","area":"知1","kind":"jiko","k":"ア","t":"言葉には，考えたことや思ったことを表す働きがあることに気付くこと。"},{"c":"82102C3112000000","area":"知1","kind":"jiko","k":"イ","t":"相手を見て話したり聞いたりするとともに，言葉の抑揚や強弱，間の取り方などに注意して話すこと。"},{"c":"82102C3113000000","area":"知1","kind":"jiko","k":"ウ","t":"漢字と仮名を用いた表記，送り仮名の付け方，改行の仕方を理解して文や文章の中で使うとともに，句読点を適切に打つこと。また，第３学年においては，日常使われている簡単な単語について，ローマ字で表記されたものを読み，ローマ字で書くこと。"},{"c":"82102C3114000000","area":"知1","kind":"jiko","k":"エ","t":"第３学年及び第４学年の各学年においては，学年別漢字配当表の当該学年までに配当されている漢字を読むこと。また，当該学年の前の学年までに配当されている漢字を書き，文や文章の中で使うとともに，当該学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"82102C3115000000","area":"知1","kind":"jiko","k":"オ","t":"様子や行動，気持ちや性格を表す語句の量を増し，話や文章の中で使うとともに，言葉には性質や役割による語句のまとまりがあることを理解し，語彙を豊かにすること。"},{"c":"82102C3116000000","area":"知1","kind":"jiko","k":"カ","t":"主語と述語との関係，修飾と被修飾との関係，指示する語句と接続する語句の役割，段落の役割について理解すること。"},{"c":"82102C3117000000","area":"知1","kind":"jiko","k":"キ","t":"丁寧な言葉を使うとともに，敬体と常体との違いに注意しながら書くこと。"},{"c":"82102C3118000000","area":"知1","kind":"jiko","k":"ク","t":"文章全体の構成や内容の大体を意識しながら音読すること。"},{"c":"82102C3121000000","area":"知2","kind":"jiko","k":"ア","t":"考えとそれを支える理由や事例，全体と中心など情報と情報との関係について理解すること。"},{"c":"82102C3122000000","area":"知2","kind":"jiko","k":"イ","t":"比較や分類の仕方，必要な語句などの書き留め方，引用の仕方や出典の示し方，辞書や事典の使い方を理解し使うこと。"},{"c":"82102C3131000000","area":"知3","kind":"jiko","k":"ア","t":"易しい文語調の短歌や俳句を音読したり暗唱したりするなどして，言葉の響きやリズムに親しむこと。"},{"c":"82102C3132000000","area":"知3","kind":"jiko","k":"イ","t":"長い間使われてきたことわざや慣用句，故事成語などの意味を知り，使うこと。"},{"c":"82102C3133000000","area":"知3","kind":"jiko","k":"ウ","t":"漢字が，へんやつくりなどから構成されていることについて理解すること。"},{"c":"82102C3134000000","area":"知3","kind":"jiko","k":"エ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"82102C3134100000","k":"ア","t":"文字の組立て方を理解し，形を整えて書くこと。"},{"c":"82102C3134200000","k":"イ","t":"漢字や仮名の大きさ，配列に注意して書くこと。"},{"c":"82102C3134300000","k":"ウ","t":"毛筆を使用して点画の書き方への理解を深め，筆圧などに注意して書くこと。"}]},{"c":"82102C3135000000","area":"知3","kind":"jiko","k":"オ","t":"幅広く読書に親しみ，読書が，必要な知識や情報を得ることに役立つことに気付くこと。"},{"c":"82102C3211100000","area":"A","kind":"jiko","k":"ア","t":"目的を意識して，日常生活の中から話題を決め，集めた材料を比較したり分類したりして，伝え合うために必要な事柄を選ぶこと。"},{"c":"82102C3211200000","area":"A","kind":"jiko","k":"イ","t":"相手に伝わるように，理由や事例などを挙げながら，話の中心が明確になるよう話の構成を考えること。"},{"c":"82102C3211300000","area":"A","kind":"jiko","k":"ウ","t":"話の中心や話す場面を意識して，言葉の抑揚や強弱，間の取り方などを工夫すること。"},{"c":"82102C3211400000","area":"A","kind":"jiko","k":"エ","t":"必要なことを記録したり質問したりしながら聞き，話し手が伝えたいことや自分が聞きたいことの中心を捉え，自分の考えをもつこと。"},{"c":"82102C3211500000","area":"A","kind":"jiko","k":"オ","t":"目的や進め方を確認し，司会などの役割を果たしながら話し合い，互いの意見の共通点や相違点に着目して，考えをまとめること。"},{"c":"82102C3212100000","area":"A","kind":"act","k":"ア","t":"説明や報告など調べたことを話したり，それらを聞いたりする活動。"},{"c":"82102C3212200000","area":"A","kind":"act","k":"イ","t":"質問するなどして情報を集めたり，それらを発表したりする活動。"},{"c":"82102C3212300000","area":"A","kind":"act","k":"ウ","t":"互いの考えを伝えるなどして，グループや学級全体で話し合う活動。"},{"c":"82102C3221100000","area":"B","kind":"jiko","k":"ア","t":"相手や目的を意識して，経験したことや想像したことなどから書くことを選び，集めた材料を比較したり分類したりして，伝えたいことを明確にすること。"},{"c":"82102C3221200000","area":"B","kind":"jiko","k":"イ","t":"書く内容の中心を明確にし，内容のまとまりで段落をつくったり，段落相互の関係に注意したりして，文章の構成を考えること。"},{"c":"82102C3221300000","area":"B","kind":"jiko","k":"ウ","t":"自分の考えとそれを支える理由や事例との関係を明確にして，書き表し方を工夫すること。"},{"c":"82102C3221400000","area":"B","kind":"jiko","k":"エ","t":"間違いを正したり，相手や目的を意識した表現になっているかを確かめたりして，文や文章を整えること。"},{"c":"82102C3221500000","area":"B","kind":"jiko","k":"オ","t":"書こうとしたことが明確になっているかなど，文章に対する感想や意見を伝え合い，自分の文章のよいところを見付けること。"},{"c":"82102C3222100000","area":"B","kind":"act","k":"ア","t":"調べたことをまとめて報告するなど，事実やそれを基に考えたことを書く活動。"},{"c":"82102C3222200000","area":"B","kind":"act","k":"イ","t":"行事の案内やお礼の文章を書くなど，伝えたいことを手紙に書く活動。"},{"c":"82102C3222300000","area":"B","kind":"act","k":"ウ","t":"詩や物語をつくるなど，感じたことや想像したことを書く活動。"},{"c":"82102C3231100000","area":"C","kind":"jiko","k":"ア","t":"段落相互の関係に着目しながら，考えとそれを支える理由や事例との関係などについて，叙述を基に捉えること。"},{"c":"82102C3231200000","area":"C","kind":"jiko","k":"イ","t":"登場人物の行動や気持ちなどについて，叙述を基に捉えること。"},{"c":"82102C3231300000","area":"C","kind":"jiko","k":"ウ","t":"目的を意識して，中心となる語や文を見付けて要約すること。"},{"c":"82102C3231400000","area":"C","kind":"jiko","k":"エ","t":"登場人物の気持ちの変化や性格，情景について，場面の移り変わりと結び付けて具体的に想像すること。"},{"c":"82102C3231500000","area":"C","kind":"jiko","k":"オ","t":"文章を読んで理解したことに基づいて，感想や考えをもつこと。"},{"c":"82102C3231600000","area":"C","kind":"jiko","k":"カ","t":"文章を読んで感じたことや考えたことを共有し，一人一人の感じ方などに違いがあることに気付くこと。"},{"c":"82102C3232100000","area":"C","kind":"act","k":"ア","t":"記録や報告などの文章を読み，文章の一部を引用して，分かったことや考えたことを説明したり，意見を述べたりする活動。"},{"c":"82102C3232200000","area":"C","kind":"act","k":"イ","t":"詩や物語などを読み，内容を説明したり，考えたことなどを伝え合ったりする活動。"},{"c":"82102C3232300000","area":"C","kind":"act","k":"ウ","t":"学校図書館などを利用し，事典や図鑑などから情報を得て，分かったことなどをまとめて説明する活動。"}]},"56":{"mokuhyo":[{"c":"82102D2100000000","t":"日常生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"82102D2200000000","t":"筋道立てて考える力や豊かに感じたり想像したりする力を養い，日常生活における人との関わりの中で伝え合う力を高め，自分の思いや考えを広げることができるようにする。"},{"c":"82102D2300000000","t":"言葉がもつよさを認識するとともに，進んで読書をし，国語の大切さを自覚して，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"82102D3111000000","area":"知1","kind":"jiko","k":"ア","t":"言葉には，相手とのつながりをつくる働きがあることに気付くこと。"},{"c":"82102D3112000000","area":"知1","kind":"jiko","k":"イ","t":"話し言葉と書き言葉との違いに気付くこと。"},{"c":"82102D3113000000","area":"知1","kind":"jiko","k":"ウ","t":"文や文章の中で漢字と仮名を適切に使い分けるとともに，送り仮名や仮名遣いに注意して正しく書くこと。"},{"c":"82102D3114000000","area":"知1","kind":"jiko","k":"エ","t":"第５学年及び第６学年の各学年においては，学年別漢字配当表の当該学年までに配当されている漢字を読むこと。また，当該学年の前の学年までに配当されている漢字を書き，文や文章の中で使うとともに，当該学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"82102D3115000000","area":"知1","kind":"jiko","k":"オ","t":"思考に関わる語句の量を増し，話や文章の中で使うとともに，語句と語句との関係，語句の構成や変化について理解し，語彙を豊かにすること。また，語感や言葉の使い方に対する感覚を意識して，語や語句を使うこと。"},{"c":"82102D3116000000","area":"知1","kind":"jiko","k":"カ","t":"文の中での語句の係り方や語順，文と文との接続の関係，話や文章の構成や展開，話や文章の種類とその特徴について理解すること。"},{"c":"82102D3117000000","area":"知1","kind":"jiko","k":"キ","t":"日常よく使われる敬語を理解し使い慣れること。"},{"c":"82102D3118000000","area":"知1","kind":"jiko","k":"ク","t":"比喩や反復などの表現の工夫に気付くこと。"},{"c":"82102D3119000000","area":"知1","kind":"jiko","k":"ケ","t":"文章を音読したり朗読したりすること。"},{"c":"82102D3121000000","area":"知2","kind":"jiko","k":"ア","t":"原因と結果など情報と情報との関係について理解すること。"},{"c":"82102D3122000000","area":"知2","kind":"jiko","k":"イ","t":"情報と情報との関係付けの仕方，図などによる語句と語句との関係の表し方を理解し使うこと。"},{"c":"82102D3131000000","area":"知3","kind":"jiko","k":"ア","t":"親しみやすい古文や漢文，近代以降の文語調の文章を音読するなどして，言葉の響きやリズムに親しむこと。"},{"c":"82102D3132000000","area":"知3","kind":"jiko","k":"イ","t":"古典について解説した文章を読んだり作品の内容の大体を知ったりすることを通して，昔の人のものの見方や感じ方を知ること。"},{"c":"82102D3133000000","area":"知3","kind":"jiko","k":"ウ","t":"語句の由来などに関心をもつとともに，時間の経過による言葉の変化や世代による言葉の違いに気付き，共通語と方言との違いを理解すること。また，仮名及び漢字の由来，特質などについて理解すること。"},{"c":"82102D3134000000","area":"知3","kind":"jiko","k":"エ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"82102D3134100000","k":"ア","t":"用紙全体との関係に注意して，文字の大きさや配列などを決めるとともに，書く速さを意識して書くこと。"},{"c":"82102D3134200000","k":"イ","t":"毛筆を使用して，穂先の動きと点画のつながりを意識して書くこと。"},{"c":"82102D3134300000","k":"ウ","t":"目的に応じて使用する筆記具を選び，その特徴を生かして書くこと。"}]},{"c":"82102D3135000000","area":"知3","kind":"jiko","k":"オ","t":"日常的に読書に親しみ，読書が，自分の考えを広げることに役立つことに気付くこと。"},{"c":"82102D3211100000","area":"A","kind":"jiko","k":"ア","t":"目的や意図に応じて，日常生活の中から話題を決め，集めた材料を分類したり関係付けたりして，伝え合う内容を検討すること。"},{"c":"82102D3211200000","area":"A","kind":"jiko","k":"イ","t":"話の内容が明確になるように，事実と感想，意見とを区別するなど，話の構成を考えること。"},{"c":"82102D3211300000","area":"A","kind":"jiko","k":"ウ","t":"資料を活用するなどして，自分の考えが伝わるように表現を工夫すること。"},{"c":"82102D3211400000","area":"A","kind":"jiko","k":"エ","t":"話し手の目的や自分が聞こうとする意図に応じて，話の内容を捉え，話し手の考えと比較しながら，自分の考えをまとめること。"},{"c":"82102D3211500000","area":"A","kind":"jiko","k":"オ","t":"互いの立場や意図を明確にしながら計画的に話し合い，考えを広げたりまとめたりすること。"},{"c":"82102D3212100000","area":"A","kind":"act","k":"ア","t":"意見や提案など自分の考えを話したり，それらを聞いたりする活動。"},{"c":"82102D3212200000","area":"A","kind":"act","k":"イ","t":"インタビューなどをして必要な情報を集めたり，それらを発表したりする活動。"},{"c":"82102D3212300000","area":"A","kind":"act","k":"ウ","t":"それぞれの立場から考えを伝えるなどして話し合う活動。"},{"c":"82102D3221100000","area":"B","kind":"jiko","k":"ア","t":"目的や意図に応じて，感じたことや考えたことなどから書くことを選び，集めた材料を分類したり関係付けたりして，伝えたいことを明確にすること。"},{"c":"82102D3221200000","area":"B","kind":"jiko","k":"イ","t":"筋道の通った文章となるように，文章全体の構成や展開を考えること。"},{"c":"82102D3221300000","area":"B","kind":"jiko","k":"ウ","t":"目的や意図に応じて簡単に書いたり詳しく書いたりするとともに，事実と感想，意見とを区別して書いたりするなど，自分の考えが伝わるように書き表し方を工夫すること。"},{"c":"82102D3221400000","area":"B","kind":"jiko","k":"エ","t":"引用したり，図表やグラフなどを用いたりして，自分の考えが伝わるように書き表し方を工夫すること。"},{"c":"82102D3221500000","area":"B","kind":"jiko","k":"オ","t":"文章全体の構成や書き表し方などに着目して，文や文章を整えること。"},{"c":"82102D3221600000","area":"B","kind":"jiko","k":"カ","t":"文章全体の構成や展開が明確になっているかなど，文章に対する感想や意見を伝え合い，自分の文章のよいところを見付けること。"},{"c":"82102D3222100000","area":"B","kind":"act","k":"ア","t":"事象を説明したり意見を述べたりするなど，考えたことや伝えたいことを書く活動。"},{"c":"82102D3222200000","area":"B","kind":"act","k":"イ","t":"短歌や俳句をつくるなど，感じたことや想像したことを書く活動。"},{"c":"82102D3222300000","area":"B","kind":"act","k":"ウ","t":"事実や経験を基に，感じたり考えたりしたことや自分にとっての意味について文章に書く活動。"},{"c":"82102D3231100000","area":"C","kind":"jiko","k":"ア","t":"事実と感想，意見などとの関係を叙述を基に押さえ，文章全体の構成を捉えて要旨を把握すること。"},{"c":"82102D3231200000","area":"C","kind":"jiko","k":"イ","t":"登場人物の相互関係や心情などについて，描写を基に捉えること。"},{"c":"82102D3231300000","area":"C","kind":"jiko","k":"ウ","t":"目的に応じて，文章と図表などを結び付けるなどして必要な情報を見付けたり，論の進め方について考えたりすること。"},{"c":"82102D3231400000","area":"C","kind":"jiko","k":"エ","t":"人物像や物語などの全体像を具体的に想像したり，表現の効果を考えたりすること。"},{"c":"82102D3231500000","area":"C","kind":"jiko","k":"オ","t":"文章を読んで理解したことに基づいて，自分の考えをまとめること。"},{"c":"82102D3231600000","area":"C","kind":"jiko","k":"カ","t":"文章を読んでまとめた意見や感想を共有し，自分の考えを広げること。"},{"c":"82102D3232100000","area":"C","kind":"act","k":"ア","t":"説明や解説などの文章を比較するなどして読み，分かったことや考えたことを，話し合ったり文章にまとめたりする活動。"},{"c":"82102D3232200000","area":"C","kind":"act","k":"イ","t":"詩や物語，伝記などを読み，内容を説明したり，自分の生き方などについて考えたことを伝え合ったりする活動。"},{"c":"82102D3232300000","area":"C","kind":"act","k":"ウ","t":"学校図書館などを利用し，複数の本や新聞などを活用して，調べたり考えたりしたことを報告する活動。"}]},"中1":{"mokuhyo":[{"c":"8310212100000000","t":"社会生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"8310212200000000","t":"筋道立てて考える力や豊かに感じたり想像したりする力を養い，日常生活における人との関わりの中で伝え合う力を高め，自分の思いや考えを確かなものにすることができるようにする。"},{"c":"8310212300000000","t":"言葉がもつ価値に気付くとともに，進んで読書をし，我が国の言語文化を大切にして，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"8310213111000000","area":"知1","kind":"jiko","k":"ア","t":"音声の働きや仕組みについて，理解を深めること。"},{"c":"8310213112000000","area":"知1","kind":"jiko","k":"イ","t":"小学校学習指導要領第２章第１節国語の学年別漢字配当表（以下「学年別漢字配当表」という。）に示されている漢字に加え，その他の常用漢字のうち300字程度から400字程度までの漢字を読むこと。また，学年別漢字配当表の漢字のうち900字程度の漢字を書き，文や文章の中で使うこと。"},{"c":"8310213113000000","area":"知1","kind":"jiko","k":"ウ","t":"事象や行為，心情を表す語句の量を増すとともに，語句の辞書的な意味と文脈上の意味との関係に注意して話や文章の中で使うことを通して，語感を磨き語彙を豊かにすること。"},{"c":"8310213114000000","area":"知1","kind":"jiko","k":"エ","t":"単語の類別について理解するとともに，指示する語句と接続する語句の役割について理解を深めること。"},{"c":"8310213115000000","area":"知1","kind":"jiko","k":"オ","t":"比喩，反復，倒置，体言止めなどの表現の技法を理解し使うこと。"},{"c":"8310213121000000","area":"知2","kind":"jiko","k":"ア","t":"原因と結果，意見と根拠など情報と情報との関係について理解すること。"},{"c":"8310213122000000","area":"知2","kind":"jiko","k":"イ","t":"比較や分類，関係付けなどの情報の整理の仕方，引用の仕方や出典の示し方について理解を深め，それらを使うこと。"},{"c":"8310213131000000","area":"知3","kind":"jiko","k":"ア","t":"音読に必要な文語のきまりや訓読の仕方を知り，古文や漢文を音読し，古典特有のリズムを通して，古典の世界に親しむこと。"},{"c":"8310213132000000","area":"知3","kind":"jiko","k":"イ","t":"古典には様々な種類の作品があることを知ること。"},{"c":"8310213133000000","area":"知3","kind":"jiko","k":"ウ","t":"共通語と方言の果たす役割について理解すること。"},{"c":"8310213134000000","area":"知3","kind":"jiko","k":"エ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"8310213134100000","k":"ア","t":"字形を整え，文字の大きさ，配列などについて理解して，楷書で書くこと。"},{"c":"8310213134200000","k":"イ","t":"漢字の行書の基礎的な書き方を理解して，身近な文字を行書で書くこと。"}]},{"c":"8310213135000000","area":"知3","kind":"jiko","k":"オ","t":"読書が，知識や情報を得たり，自分の考えを広げたりすることに役立つことを理解すること。"},{"c":"8310213211100000","area":"A","kind":"jiko","k":"ア","t":"目的や場面に応じて，日常生活の中から話題を決め，集めた材料を整理し，伝え合う内容を検討すること。"},{"c":"8310213211200000","area":"A","kind":"jiko","k":"イ","t":"自分の考えや根拠が明確になるように，話の中心的な部分と付加的な部分，事実と意見との関係などに注意して，話の構成を考えること。"},{"c":"8310213211300000","area":"A","kind":"jiko","k":"ウ","t":"相手の反応を踏まえながら，自分の考えが分かりやすく伝わるように表現を工夫すること。"},{"c":"8310213211400000","area":"A","kind":"jiko","k":"エ","t":"必要に応じて記録したり質問したりしながら話の内容を捉え，共通点や相違点などを踏まえて，自分の考えをまとめること。"},{"c":"8310213211500000","area":"A","kind":"jiko","k":"オ","t":"話題や展開を捉えながら話し合い，互いの発言を結び付けて考えをまとめること。"},{"c":"8310213212100000","area":"A","kind":"act","k":"ア","t":"紹介や報告など伝えたいことを話したり，それらを聞いて質問したり意見などを述べたりする活動。"},{"c":"8310213212200000","area":"A","kind":"act","k":"イ","t":"互いの考えを伝えるなどして，少人数で話し合う活動。"},{"c":"8310213221100000","area":"B","kind":"jiko","k":"ア","t":"目的や意図に応じて，日常生活の中から題材を決め，集めた材料を整理し，伝えたいことを明確にすること。"},{"c":"8310213221200000","area":"B","kind":"jiko","k":"イ","t":"書く内容の中心が明確になるように，段落の役割などを意識して文章の構成や展開を考えること。"},{"c":"8310213221300000","area":"B","kind":"jiko","k":"ウ","t":"根拠を明確にしながら，自分の考えが伝わる文章になるように工夫すること。"},{"c":"8310213221400000","area":"B","kind":"jiko","k":"エ","t":"読み手の立場に立って，表記や語句の用法，叙述の仕方などを確かめて，文章を整えること。"},{"c":"8310213221500000","area":"B","kind":"jiko","k":"オ","t":"根拠の明確さなどについて，読み手からの助言などを踏まえ，自分の文章のよい点や改善点を見いだすこと。"},{"c":"8310213222100000","area":"B","kind":"act","k":"ア","t":"本や資料から文章や図表などを引用して説明したり記録したりするなど，事実やそれを基に考えたことを書く活動。"},{"c":"8310213222200000","area":"B","kind":"act","k":"イ","t":"行事の案内や報告の文章を書くなど，伝えるべきことを整理して書く活動。"},{"c":"8310213222300000","area":"B","kind":"act","k":"ウ","t":"詩を創作したり随筆を書いたりするなど，感じたことや考えたことを書く活動。"},{"c":"8310213231100000","area":"C","kind":"jiko","k":"ア","t":"文章の中心的な部分と付加的な部分，事実と意見との関係などについて叙述を基に捉え，要旨を把握すること。"},{"c":"8310213231200000","area":"C","kind":"jiko","k":"イ","t":"場面の展開や登場人物の相互関係，心情の変化などについて，描写を基に捉えること。"},{"c":"8310213231300000","area":"C","kind":"jiko","k":"ウ","t":"目的に応じて必要な情報に着目して要約したり，場面と場面，場面と描写などを結び付けたりして，内容を解釈すること。"},{"c":"8310213231400000","area":"C","kind":"jiko","k":"エ","t":"文章の構成や展開，表現の効果について，根拠を明確にして考えること。"},{"c":"8310213231500000","area":"C","kind":"jiko","k":"オ","t":"文章を読んで理解したことに基づいて，自分の考えを確かなものにすること。"},{"c":"8310213232100000","area":"C","kind":"act","k":"ア","t":"説明や記録などの文章を読み，理解したことや考えたことを報告したり文章にまとめたりする活動。"},{"c":"8310213232200000","area":"C","kind":"act","k":"イ","t":"小説や随筆などを読み，考えたことなどを記録したり伝え合ったりする活動。"},{"c":"8310213232300000","area":"C","kind":"act","k":"ウ","t":"学校図書館などを利用し，多様な情報を得て，考えたことなどを報告したり資料にまとめたりする活動。"}]},"中2":{"mokuhyo":[{"c":"8310222100000000","t":"社会生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"8310222200000000","t":"論理的に考える力や共感したり想像したりする力を養い，社会生活における人との関わりの中で伝え合う力を高め，自分の思いや考えを広げたり深めたりすることができるようにする。"},{"c":"8310222300000000","t":"言葉がもつ価値を認識するとともに，読書を生活に役立て，我が国の言語文化を大切にして，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"8310223111000000","area":"知1","kind":"jiko","k":"ア","t":"言葉には，相手の行動を促す働きがあることに気付くこと。"},{"c":"8310223112000000","area":"知1","kind":"jiko","k":"イ","t":"話し言葉と書き言葉の特徴について理解すること。"},{"c":"8310223113000000","area":"知1","kind":"jiko","k":"ウ","t":"第１学年までに学習した常用漢字に加え，その他の常用漢字のうち350字程度から450字程度までの漢字を読むこと。また，学年別漢字配当表に示されている漢字を書き，文や文章の中で使うこと。"},{"c":"8310223114000000","area":"知1","kind":"jiko","k":"エ","t":"抽象的な概念を表す語句の量を増すとともに，類義語と対義語，同音異義語や多義的な意味を表す語句などについて理解し，話や文章の中で使うことを通して，語感を磨き語彙を豊かにすること。"},{"c":"8310223115000000","area":"知1","kind":"jiko","k":"オ","t":"単語の活用，助詞や助動詞などの働き，文の成分の順序や照応など文の構成について理解するとともに，話や文章の構成や展開について理解を深めること。"},{"c":"8310223116000000","area":"知1","kind":"jiko","k":"カ","t":"敬語の働きについて理解し，話や文章の中で使うこと。"},{"c":"8310223121000000","area":"知2","kind":"jiko","k":"ア","t":"意見と根拠，具体と抽象など情報と情報との関係について理解すること。"},{"c":"8310223122000000","area":"知2","kind":"jiko","k":"イ","t":"情報と情報との関係の様々な表し方を理解し使うこと。"},{"c":"8310223131000000","area":"知3","kind":"jiko","k":"ア","t":"作品の特徴を生かして朗読するなどして，古典の世界に親しむこと。"},{"c":"8310223132000000","area":"知3","kind":"jiko","k":"イ","t":"現代語訳や語注などを手掛かりに作品を読むことを通して，古典に表れたものの見方や考え方を知ること。"},{"c":"8310223133000000","area":"知3","kind":"jiko","k":"ウ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"8310223133100000","k":"ア","t":"漢字の行書とそれに調和した仮名の書き方を理解して，読みやすく速く書くこと。"},{"c":"8310223133200000","k":"イ","t":"目的や必要に応じて，楷書又は行書を選んで書くこと。"}]},{"c":"8310223134000000","area":"知3","kind":"jiko","k":"エ","t":"本や文章などには，様々な立場や考え方が書かれていることを知り，自分の考えを広げたり深めたりする読書に生かすこと。"},{"c":"8310223211100000","area":"A","kind":"jiko","k":"ア","t":"目的や場面に応じて，社会生活の中から話題を決め，異なる立場や考えを想定しながら集めた材料を整理し，伝え合う内容を検討すること。"},{"c":"8310223211200000","area":"A","kind":"jiko","k":"イ","t":"自分の立場や考えが明確になるように，根拠の適切さや論理の展開などに注意して，話の構成を工夫すること。"},{"c":"8310223211300000","area":"A","kind":"jiko","k":"ウ","t":"資料や機器を用いるなどして，自分の考えが分かりやすく伝わるように表現を工夫すること。"},{"c":"8310223211400000","area":"A","kind":"jiko","k":"エ","t":"論理の展開などに注意して聞き，話し手の考えと比較しながら，自分の考えをまとめること。"},{"c":"8310223211500000","area":"A","kind":"jiko","k":"オ","t":"互いの立場や考えを尊重しながら話し合い，結論を導くために考えをまとめること。"},{"c":"8310223212100000","area":"A","kind":"act","k":"ア","t":"説明や提案など伝えたいことを話したり，それらを聞いて質問や助言などをしたりする活動。"},{"c":"8310223212200000","area":"A","kind":"act","k":"イ","t":"それぞれの立場から考えを伝えるなどして，議論や討論をする活動。"},{"c":"8310223221100000","area":"B","kind":"jiko","k":"ア","t":"目的や意図に応じて，社会生活の中から題材を決め，多様な方法で集めた材料を整理し，伝えたいことを明確にすること。"},{"c":"8310223221200000","area":"B","kind":"jiko","k":"イ","t":"伝えたいことが分かりやすく伝わるように，段落相互の関係などを明確にし，文章の構成や展開を工夫すること。"},{"c":"8310223221300000","area":"B","kind":"jiko","k":"ウ","t":"根拠の適切さを考えて説明や具体例を加えたり，表現の効果を考えて描写したりするなど，自分の考えが伝わる文章になるように工夫すること。"},{"c":"8310223221400000","area":"B","kind":"jiko","k":"エ","t":"読み手の立場に立って，表現の効果などを確かめて，文章を整えること。"},{"c":"8310223221500000","area":"B","kind":"jiko","k":"オ","t":"表現の工夫とその効果などについて，読み手からの助言などを踏まえ，自分の文章のよい点や改善点を見いだすこと。"},{"c":"8310223222100000","area":"B","kind":"act","k":"ア","t":"多様な考えができる事柄について意見を述べるなど，自分の考えを書く活動。"},{"c":"8310223222200000","area":"B","kind":"act","k":"イ","t":"社会生活に必要な手紙や電子メールを書くなど，伝えたいことを相手や媒体を考慮して書く活動。"},{"c":"8310223222300000","area":"B","kind":"act","k":"ウ","t":"短歌や俳句，物語を創作するなど，感じたことや想像したことを書く活動。"},{"c":"8310223231100000","area":"C","kind":"jiko","k":"ア","t":"文章全体と部分との関係に注意しながら，主張と例示との関係や登場人物の設定の仕方などを捉えること。"},{"c":"8310223231200000","area":"C","kind":"jiko","k":"イ","t":"目的に応じて複数の情報を整理しながら適切な情報を得たり，登場人物の言動の意味などについて考えたりして，内容を解釈すること。"},{"c":"8310223231300000","area":"C","kind":"jiko","k":"ウ","t":"文章と図表などを結び付け，その関係を踏まえて内容を解釈すること。"},{"c":"8310223231400000","area":"C","kind":"jiko","k":"エ","t":"観点を明確にして文章を比較するなどし，文章の構成や論理の展開，表現の効果について考えること。"},{"c":"8310223231500000","area":"C","kind":"jiko","k":"オ","t":"文章を読んで理解したことや考えたことを知識や経験と結び付け，自分の考えを広げたり深めたりすること。"},{"c":"8310223232100000","area":"C","kind":"act","k":"ア","t":"報告や解説などの文章を読み，理解したことや考えたことを説明したり文章にまとめたりする活動。"},{"c":"8310223232200000","area":"C","kind":"act","k":"イ","t":"詩歌や小説などを読み，引用して解説したり，考えたことなどを伝え合ったりする活動。"},{"c":"8310223232300000","area":"C","kind":"act","k":"ウ","t":"本や新聞，インターネットなどから集めた情報を活用し，出典を明らかにしながら，考えたことなどを説明したり提案したりする活動。"}]},"中3":{"mokuhyo":[{"c":"8310232100000000","t":"社会生活に必要な国語の知識や技能を身に付けるとともに，我が国の言語文化に親しんだり理解したりすることができるようにする。"},{"c":"8310232200000000","t":"論理的に考える力や深く共感したり豊かに想像したりする力を養い，社会生活における人との関わりの中で伝え合う力を高め，自分の思いや考えを広げたり深めたりすることができるようにする。"},{"c":"8310232300000000","t":"言葉がもつ価値を認識するとともに，読書を通して自己を向上させ，我が国の言語文化に関わり，思いや考えを伝え合おうとする態度を養う。"}],"items":[{"c":"8310233111000000","area":"知1","kind":"jiko","k":"ア","t":"第２学年までに学習した常用漢字に加え，その他の常用漢字の大体を読むこと。また，学年別漢字配当表に示されている漢字について，文や文章の中で使い慣れること。"},{"c":"8310233112000000","area":"知1","kind":"jiko","k":"イ","t":"理解したり表現したりするために必要な語句の量を増し，慣用句や四字熟語などについて理解を深め，話や文章の中で使うとともに，和語，漢語，外来語などを使い分けることを通して，語感を磨き語彙を豊かにすること。"},{"c":"8310233113000000","area":"知1","kind":"jiko","k":"ウ","t":"話や文章の種類とその特徴について理解を深めること。"},{"c":"8310233114000000","area":"知1","kind":"jiko","k":"エ","t":"敬語などの相手や場に応じた言葉遣いを理解し，適切に使うこと。"},{"c":"8310233121000000","area":"知2","kind":"jiko","k":"ア","t":"具体と抽象など情報と情報との関係について理解を深めること。"},{"c":"8310233122000000","area":"知2","kind":"jiko","k":"イ","t":"情報の信頼性の確かめ方を理解し使うこと。"},{"c":"8310233131000000","area":"知3","kind":"jiko","k":"ア","t":"歴史的背景などに注意して古典を読むことを通して，その世界に親しむこと。"},{"c":"8310233132000000","area":"知3","kind":"jiko","k":"イ","t":"長く親しまれている言葉や古典の一節を引用するなどして使うこと。"},{"c":"8310233133000000","area":"知3","kind":"jiko","k":"ウ","t":"時間の経過による言葉の変化や世代による言葉の違いについて理解すること。"},{"c":"8310233134000000","area":"知3","kind":"jiko","k":"エ","t":"書写に関する次の事項を理解し使うこと。","subs":[{"c":"8310233134100000","k":"ア","t":"身の回りの多様な表現を通して文字文化の豊かさに触れ，効果的に文字を書くこと。"}]},{"c":"8310233135000000","area":"知3","kind":"jiko","k":"オ","t":"自分の生き方や社会との関わり方を支える読書の意義と効用について理解すること。"},{"c":"8310233211100000","area":"A","kind":"jiko","k":"ア","t":"目的や場面に応じて，社会生活の中から話題を決め，多様な考えを想定しながら材料を整理し，伝え合う内容を検討すること。"},{"c":"8310233211200000","area":"A","kind":"jiko","k":"イ","t":"自分の立場や考えを明確にし，相手を説得できるように論理の展開などを考えて，話の構成を工夫すること。"},{"c":"8310233211300000","area":"A","kind":"jiko","k":"ウ","t":"場の状況に応じて言葉を選ぶなど，自分の考えが分かりやすく伝わるように表現を工夫すること。"},{"c":"8310233211400000","area":"A","kind":"jiko","k":"エ","t":"話の展開を予測しながら聞き，聞き取った内容や表現の仕方を評価して，自分の考えを広げたり深めたりすること。"},{"c":"8310233211500000","area":"A","kind":"jiko","k":"オ","t":"進行の仕方を工夫したり互いの発言を生かしたりしながら話し合い，合意形成に向けて考えを広げたり深めたりすること。"},{"c":"8310233212100000","area":"A","kind":"act","k":"ア","t":"提案や主張など自分の考えを話したり，それらを聞いて質問したり評価などを述べたりする活動。"},{"c":"8310233212200000","area":"A","kind":"act","k":"イ","t":"互いの考えを生かしながら議論や討論をする活動。"},{"c":"8310233221100000","area":"B","kind":"jiko","k":"ア","t":"目的や意図に応じて，社会生活の中から題材を決め，集めた材料の客観性や信頼性を確認し，伝えたいことを明確にすること。"},{"c":"8310233221200000","area":"B","kind":"jiko","k":"イ","t":"文章の種類を選択し，多様な読み手を説得できるように論理の展開などを考えて，文章の構成を工夫すること。"},{"c":"8310233221300000","area":"B","kind":"jiko","k":"ウ","t":"表現の仕方を考えたり資料を適切に引用したりするなど，自分の考えが分かりやすく伝わる文章になるように工夫すること。"},{"c":"8310233221400000","area":"B","kind":"jiko","k":"エ","t":"目的や意図に応じた表現になっているかなどを確かめて，文章全体を整えること。"},{"c":"8310233221500000","area":"B","kind":"jiko","k":"オ","t":"論理の展開などについて，読み手からの助言などを踏まえ，自分の文章のよい点や改善点を見いだすこと。"},{"c":"8310233222100000","area":"B","kind":"act","k":"ア","t":"関心のある事柄について批評するなど，自分の考えを書く活動。"},{"c":"8310233222200000","area":"B","kind":"act","k":"イ","t":"情報を編集して文章にまとめるなど，伝えたいことを整理して書く活動。"},{"c":"8310233231100000","area":"C","kind":"jiko","k":"ア","t":"文章の種類を踏まえて，論理や物語の展開の仕方などを捉えること。"},{"c":"8310233231200000","area":"C","kind":"jiko","k":"イ","t":"文章を批判的に読みながら，文章に表れているものの見方や考え方について考えること。"},{"c":"8310233231300000","area":"C","kind":"jiko","k":"ウ","t":"文章の構成や論理の展開，表現の仕方について評価すること。"},{"c":"8310233231400000","area":"C","kind":"jiko","k":"エ","t":"文章を読んで考えを広げたり深めたりして，人間，社会，自然などについて，自分の意見をもつこと。"},{"c":"8310233232100000","area":"C","kind":"act","k":"ア","t":"論説や報道などの文章を比較するなどして読み，理解したことや考えたことについて討論したり文章にまとめたりする活動。"},{"c":"8310233232200000","area":"C","kind":"act","k":"イ","t":"詩歌や小説などを読み，批評したり，考えたことなどを伝え合ったりする活動。"},{"c":"8310233232300000","area":"C","kind":"act","k":"ウ","t":"実用的な文章を読み，実生活への生かし方を考える活動。"}]}},"kyoka":{"lead":"言葉による見方・考え方を働かせ，言語活動を通して，国語で正確に理解し適切に表現する資質・能力を次のとおり育成することを目指す。","mokuhyo":[{"c":"8210100100000000","t":"日常生活に必要な国語について，その特質を理解し適切に使うことができるようにする。"},{"c":"8210100200000000","t":"日常生活における人との関わりの中で伝え合う力を高め，思考力や想像力を養う。"},{"c":"8210100300000000","t":"言葉がもつよさを認識するとともに，言語感覚を養い，国語の大切さを自覚し，国語を尊重してその能力の向上を図る態度を養う。"}],"c":"8210100000000000"},"old":{"lead":"国語を適切に表現し正確に理解する能力を育成し，伝え合う力を高めるとともに，思考力や想像力及び言語感覚を養い，国語に対する関心を深め国語を尊重する態度を育てる。","bands":{"12":{"mokuhyo":[{"c":"72102A2100000000","t":"相手に応じ，身近なことなどについて，事柄の順序を考えながら話す能力，大事なことを落とさないように聞く能力，話題に沿って話し合う能力を身に付けさせるとともに，進んで話したり聞いたりしようとする態度を育てる。"},{"c":"72102A2200000000","t":"経験したことや想像したことなどについて，順序を整理し，簡単な構成を考えて文や文章を書く能力を身に付けさせるとともに，進んで書こうとする態度を育てる。"},{"c":"72102A2300000000","t":"書かれている事柄の順序や場面の様子などに気付いたり，想像を広げたりしながら読む能力を身に付けさせるとともに，楽しんで読書しようとする態度を育てる。"}],"items":[{"c":"72102A3111000000","area":"A","kind":"jiko","k":"ア","t":"身近なことや経験したことなどから話題を決め，必要な事柄を思い出すこと。"},{"c":"72102A3112000000","area":"A","kind":"jiko","k":"イ","t":"相手に応じて，話す事柄を順序立て，丁寧な言葉と普通の言葉との違いに気を付けて話すこと。"},{"c":"72102A3113000000","area":"A","kind":"jiko","k":"ウ","t":"姿勢や口形，声の大きさや速さなどに注意して，はっきりした発音で話すこと。"},{"c":"72102A3114000000","area":"A","kind":"jiko","k":"エ","t":"大事なことを落とさないようにしながら，興味をもって聞くこと。"},{"c":"72102A3115000000","area":"A","kind":"jiko","k":"オ","t":"互いの話を集中して聞き，話題に沿って話し合うこと。"},{"c":"72102A3121000000","area":"A","kind":"act","k":"ア","t":"事物の説明や経験の報告をしたり，それらを聞いて感想を述べたりすること。"},{"c":"72102A3122000000","area":"A","kind":"act","k":"イ","t":"尋ねたり応答したり，グループで話し合って考えを一つにまとめたりすること。"},{"c":"72102A3123000000","area":"A","kind":"act","k":"ウ","t":"場面に合わせてあいさつをしたり，必要なことについて身近な人と連絡をし合ったりすること。"},{"c":"72102A3124000000","area":"A","kind":"act","k":"エ","t":"知らせたいことなどについて身近な人に紹介したり，それを聞いたりすること。"},{"c":"72102A3211000000","area":"B","kind":"jiko","k":"ア","t":"経験したことや想像したことなどから書くことを決め，書こうとする題材に必要な事柄を集めること。"},{"c":"72102A3212000000","area":"B","kind":"jiko","k":"イ","t":"自分の考えが明確になるように，事柄の順序に沿って簡単な構成を考えること。"},{"c":"72102A3213000000","area":"B","kind":"jiko","k":"ウ","t":"語と語や文と文との続き方に注意しながら，つながりのある文や文章を書くこと。"},{"c":"72102A3214000000","area":"B","kind":"jiko","k":"エ","t":"文章を読み返す習慣を付けるとともに，間違いなどに気付き，正すこと。"},{"c":"72102A3215000000","area":"B","kind":"jiko","k":"オ","t":"書いたものを読み合い，よいところを見付けて感想を伝え合うこと。"},{"c":"72102A3221000000","area":"B","kind":"act","k":"ア","t":"想像したことなどを文章に書くこと。"},{"c":"72102A3222000000","area":"B","kind":"act","k":"イ","t":"経験したことを報告する文章や観察したことを記録する文章などを書くこと。"},{"c":"72102A3223000000","area":"B","kind":"act","k":"ウ","t":"身近な事物を簡単に説明する文章などを書くこと。"},{"c":"72102A3224000000","area":"B","kind":"act","k":"エ","t":"紹介したいことをメモにまとめたり，文章に書いたりすること。"},{"c":"72102A3225000000","area":"B","kind":"act","k":"オ","t":"伝えたいことを簡単な手紙に書くこと。"},{"c":"72102A3311000000","area":"C","kind":"jiko","k":"ア","t":"語のまとまりや言葉の響きなどに気を付けて音読すること。"},{"c":"72102A3312000000","area":"C","kind":"jiko","k":"イ","t":"時間的な順序や事柄の順序などを考えながら内容の大体を読むこと。"},{"c":"72102A3313000000","area":"C","kind":"jiko","k":"ウ","t":"場面の様子について，登場人物の行動を中心に想像を広げながら読むこと。"},{"c":"72102A3314000000","area":"C","kind":"jiko","k":"エ","t":"文章の中の大事な言葉や文を書き抜くこと。"},{"c":"72102A3315000000","area":"C","kind":"jiko","k":"オ","t":"文章の内容と自分の経験とを結び付けて，自分の思いや考えをまとめ，発表し合うこと。"},{"c":"72102A3316000000","area":"C","kind":"jiko","k":"カ","t":"楽しんだり知識を得たりするために，本や文章を選んで読むこと。"},{"c":"72102A3321000000","area":"C","kind":"act","k":"ア","t":"本や文章を楽しんだり，想像を広げたりしながら読むこと。"},{"c":"72102A3322000000","area":"C","kind":"act","k":"イ","t":"物語の読み聞かせを聞いたり，物語を演じたりすること。"},{"c":"72102A3323000000","area":"C","kind":"act","k":"ウ","t":"事物の仕組みなどについて説明した本や文章を読むこと。"},{"c":"72102A3324000000","area":"C","kind":"act","k":"エ","t":"物語や，科学的なことについて書いた本や文章を読んで，感想を書くこと。"},{"c":"72102A3325000000","area":"C","kind":"act","k":"オ","t":"読んだ本について，好きなところを紹介すること。"},{"c":"72102A3411100000","area":"T","kind":"jiko","g":"ア","k":"ア","t":"昔話や神話・伝承などの本や文章の読み聞かせを聞いたり，発表し合ったりすること。"},{"c":"72102A3412100000","area":"T","kind":"jiko","g":"イ","k":"ア","t":"言葉には，事物の内容を表す働きや，経験したことを伝える働きがあることに気付くこと。"},{"c":"72102A3412200000","area":"T","kind":"jiko","g":"イ","k":"イ","t":"音節と文字との関係や，アクセントによる語の意味の違いなどに気付くこと。"},{"c":"72102A3412300000","area":"T","kind":"jiko","g":"イ","k":"ウ","t":"言葉には，意味による語句のまとまりがあることに気付くこと。"},{"c":"72102A3412400000","area":"T","kind":"jiko","g":"イ","k":"エ","t":"長音，拗音，促音，撥音などの表記ができ，助詞の「は」，「へ」及び「を」を文の中で正しく使うこと。"},{"c":"72102A3412500000","area":"T","kind":"jiko","g":"イ","k":"オ","t":"句読点の打ち方や，かぎ（「　」）の使い方を理解して文章の中で使うこと。"},{"c":"72102A3412600000","area":"T","kind":"jiko","g":"イ","k":"カ","t":"文の中における主語と述語との関係に注意すること。"},{"c":"72102A3412700000","area":"T","kind":"jiko","g":"イ","k":"キ","t":"敬体で書かれた文章に慣れること。"},{"c":"72102A3413100000","area":"T","kind":"jiko","g":"ウ","k":"ア","t":"平仮名及び片仮名を読み，書くこと。また，片仮名で書く語の種類を知り，文や文章の中で使うこと。"},{"c":"7210213413200000","area":"T","kind":"jiko","g":"ウ","k":"イ","t":"第１学年においては，別表の学年別漢字配当表（以下「学年別漢字配当表」という。）の第１学年に配当されている漢字を読み，漸次書き，文や文章の中で使うこと。"},{"c":"7210223413300000","area":"T","kind":"jiko","g":"ウ","k":"ウ","t":"第２学年においては，学年別漢字配当表の第２学年までに配当されている漢字を読むこと。また，第１学年に配当されている漢字を書き，文や文章の中で使うとともに，第２学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"72102A3421000000","area":"S","kind":"jiko","k":"ア","t":"姿勢や筆記具の持ち方を正しくし，文字の形に注意しながら，丁寧に書くこと。"},{"c":"72102A3422000000","area":"S","kind":"jiko","k":"イ","t":"点画の長短や方向，接し方や交わり方などに注意して，筆順に従って文字を正しく書くこと。"}]},"34":{"mokuhyo":[{"c":"72102C2100000000","t":"相手や目的に応じ，調べたことなどについて，筋道を立てて話す能力，話の中心に気を付けて聞く能力，進行に沿って話し合う能力を身に付けさせるとともに，工夫をしながら話したり聞いたりしようとする態度を育てる。"},{"c":"72102C2200000000","t":"相手や目的に応じ，調べたことなどが伝わるように，段落相互の関係などに注意して文章を書く能力を身に付けさせるとともに，工夫をしながら書こうとする態度を育てる。"},{"c":"72102C2300000000","t":"目的に応じ，内容の中心をとらえたり段落相互の関係を考えたりしながら読む能力を身に付けさせるとともに，幅広く読書しようとする態度を育てる。"}],"items":[{"c":"72102C3111000000","area":"A","kind":"jiko","k":"ア","t":"関心のあることなどから話題を決め，必要な事柄について調べ，要点をメモすること。"},{"c":"72102C3112000000","area":"A","kind":"jiko","k":"イ","t":"相手や目的に応じて，理由や事例などを挙げながら筋道を立て，丁寧な言葉を用いるなど適切な言葉遣いで話すこと。"},{"c":"72102C3113000000","area":"A","kind":"jiko","k":"ウ","t":"相手を見たり，言葉の抑揚や強弱，間の取り方などに注意したりして話すこと。"},{"c":"72102C3114000000","area":"A","kind":"jiko","k":"エ","t":"話の中心に気を付けて聞き，質問をしたり感想を述べたりすること。"},{"c":"72102C3115000000","area":"A","kind":"jiko","k":"オ","t":"互いの考えの共通点や相違点を考え，司会や提案などの役割を果たしながら，進行に沿って話し合うこと。"},{"c":"72102C3121000000","area":"A","kind":"act","k":"ア","t":"出来事の説明や調査の報告をしたり，それらを聞いて意見を述べたりすること。"},{"c":"72102C3122000000","area":"A","kind":"act","k":"イ","t":"学級全体で話し合って考えをまとめたり，意見を述べ合ったりすること。"},{"c":"72102C3123000000","area":"A","kind":"act","k":"ウ","t":"図表や絵，写真などから読み取ったことを基に話したり，聞いたりすること。"},{"c":"72102C3211000000","area":"B","kind":"jiko","k":"ア","t":"関心のあることなどから書くことを決め，相手や目的に応じて，書く上で必要な事柄を調べること。"},{"c":"72102C3212000000","area":"B","kind":"jiko","k":"イ","t":"文章全体における段落の役割を理解し，自分の考えが明確になるように，段落相互の関係などに注意して文章を構成すること。"},{"c":"72102C3213000000","area":"B","kind":"jiko","k":"ウ","t":"書こうとすることの中心を明確にし，目的や必要に応じて理由や事例を挙げて書くこと。"},{"c":"72102C3214000000","area":"B","kind":"jiko","k":"エ","t":"文章の敬体と常体との違いに注意しながら書くこと。"},{"c":"72102C3215000000","area":"B","kind":"jiko","k":"オ","t":"文章の間違いを正したり，よりよい表現に書き直したりすること。"},{"c":"72102C3216000000","area":"B","kind":"jiko","k":"カ","t":"書いたものを発表し合い，書き手の考えの明確さなどについて意見を述べ合うこと。"},{"c":"72102C3221000000","area":"B","kind":"act","k":"ア","t":"身近なこと，想像したことなどを基に，詩をつくったり，物語を書いたりすること。"},{"c":"72102C3222000000","area":"B","kind":"act","k":"イ","t":"疑問に思ったことを調べて，報告する文章を書いたり，学級新聞などに表したりすること。"},{"c":"72102C3223000000","area":"B","kind":"act","k":"ウ","t":"収集した資料を効果的に使い，説明する文章などを書くこと。"},{"c":"72102C3224000000","area":"B","kind":"act","k":"エ","t":"目的に合わせて依頼状，案内状，礼状などの手紙を書くこと。"},{"c":"72102C3311000000","area":"C","kind":"jiko","k":"ア","t":"内容の中心や場面の様子がよく分かるように音読すること。"},{"c":"72102C3312000000","area":"C","kind":"jiko","k":"イ","t":"目的に応じて，中心となる語や文をとらえて段落相互の関係や事実と意見との関係を考え，文章を読むこと。"},{"c":"72102C3313000000","area":"C","kind":"jiko","k":"ウ","t":"場面の移り変わりに注意しながら，登場人物の性格や気持ちの変化，情景などについて，叙述を基に想像して読むこと。"},{"c":"72102C3314000000","area":"C","kind":"jiko","k":"エ","t":"目的や必要に応じて，文章の要点や細かい点に注意しながら読み，文章などを引用したり要約したりすること。"},{"c":"72102C3315000000","area":"C","kind":"jiko","k":"オ","t":"文章を読んで考えたことを発表し合い，一人一人の感じ方について違いのあることに気付くこと。"},{"c":"72102C3316000000","area":"C","kind":"jiko","k":"カ","t":"目的に応じて，いろいろな本や文章を選んで読むこと。"},{"c":"72102C3321000000","area":"C","kind":"act","k":"ア","t":"物語や詩を読み，感想を述べ合うこと。"},{"c":"72102C3322000000","area":"C","kind":"act","k":"イ","t":"記録や報告の文章，図鑑や事典などを読んで利用すること。"},{"c":"72102C3323000000","area":"C","kind":"act","k":"ウ","t":"記録や報告の文章を読んでまとめたものを読み合うこと。"},{"c":"72102C3324000000","area":"C","kind":"act","k":"エ","t":"紹介したい本を取り上げて説明すること。"},{"c":"72102C3325000000","area":"C","kind":"act","k":"オ","t":"必要な情報を得るために，読んだ内容に関連した他の本や文章などを読むこと。"},{"c":"72102C3411100000","area":"T","kind":"jiko","g":"ア","k":"ア","t":"易しい文語調の短歌や俳句について，情景を思い浮かべたり，リズムを感じ取りながら音読や暗唱をしたりすること。"},{"c":"72102C3411200000","area":"T","kind":"jiko","g":"ア","k":"イ","t":"長い間使われてきたことわざや慣用句，故事成語などの意味を知り，使うこと。"},{"c":"72102C2412100000","area":"T","kind":"jiko","g":"イ","k":"ア","t":"言葉には，考えたことや思ったことを表す働きがあることに気付くこと。"},{"c":"72102C2412200000","area":"T","kind":"jiko","g":"イ","k":"イ","t":"漢字と仮名を用いた表記などに関心をもつこと。"},{"c":"72102C2412300000","area":"T","kind":"jiko","g":"イ","k":"ウ","t":"送り仮名に注意して書き，また，活用についての意識をもつこと。"},{"c":"72102C2412400000","area":"T","kind":"jiko","g":"イ","k":"エ","t":"句読点を適切に打ち，また，段落の始め，会話の部分などの必要な箇所は行を改めて書くこと。"},{"c":"72102C3412500000","area":"T","kind":"jiko","g":"イ","k":"オ","t":"表現したり理解したりするために必要な語句を増し，また，語句には性質や役割の上で類別があることを理解すること。"},{"c":"72102C3412600000","area":"T","kind":"jiko","g":"イ","k":"カ","t":"表現したり理解したりするために必要な文字や語句について，辞書を利用して調べる方法を理解し，調べる習慣を付けること。"},{"c":"72102C3412700000","area":"T","kind":"jiko","g":"イ","k":"キ","t":"修飾と被修飾との関係など，文の構成について初歩的な理解をもつこと。"},{"c":"72102C3412800000","area":"T","kind":"jiko","g":"イ","k":"ク","t":"指示語や接続語が文と文との意味のつながりに果たす役割を理解し，使うこと。"},{"c":"7210233413100000","area":"T","kind":"jiko","g":"ウ","k":"ア","t":"第３学年においては，日常使われている簡単な単語について，ローマ字で表記されたものを読み，また，ローマ字で書くこと。"},{"c":"72102C3413200000","area":"T","kind":"jiko","g":"ウ","k":"イ","t":"第３学年及び第４学年の各学年においては，学年別漢字配当表の当該学年までに配当されている漢字を読むこと。また，当該学年の前の学年までに配当されている漢字を書き，文や文章の中で使うとともに，当該学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"72102C3413300000","area":"T","kind":"jiko","g":"ウ","k":"ウ","t":"漢字のへん，つくりなどの構成についての知識をもつこと。"},{"c":"72102C3421000000","area":"S","kind":"jiko","k":"ア","t":"文字の組立て方を理解し，形を整えて書くこと。"},{"c":"72102C3422000000","area":"S","kind":"jiko","k":"イ","t":"漢字や仮名の大きさ，配列に注意して書くこと。"},{"c":"72102C3423000000","area":"S","kind":"jiko","k":"ウ","t":"点画の種類を理解するとともに，毛筆を使用して筆圧などに注意して書くこと。"}]},"56":{"mokuhyo":[{"c":"72102D2100000000","t":"目的や意図に応じ，考えたことや伝えたいことなどについて，的確に話す能力，相手の意図をつかみながら聞く能力，計画的に話し合う能力を身に付けさせるとともに，適切に話したり聞いたりしようとする態度を育てる。"},{"c":"72102D2200000000","t":"目的や意図に応じ，考えたことなどを文章全体の構成の効果を考えて文章に書く能力を身に付けさせるとともに，適切に書こうとする態度を育てる。"},{"c":"72102D2300000000","t":"目的に応じ，内容や要旨をとらえながら読む能力を身に付けさせるとともに，読書を通して考えを広げたり深めたりしようとする態度を育てる。"}],"items":[{"c":"72102D3111000000","area":"A","kind":"jiko","k":"ア","t":"考えたことや伝えたいことなどから話題を決め，収集した知識や情報を関係付けること。"},{"c":"72102D3112000000","area":"A","kind":"jiko","k":"イ","t":"目的や意図に応じて，事柄が明確に伝わるように話の構成を工夫しながら，場に応じた適切な言葉遣いで話すこと。"},{"c":"72102D3113000000","area":"A","kind":"jiko","k":"ウ","t":"共通語と方言との違いを理解し，また，必要に応じて共通語で話すこと。"},{"c":"72102D3114000000","area":"A","kind":"jiko","k":"エ","t":"話し手の意図をとらえながら聞き，自分の意見と比べるなどして考えをまとめること。"},{"c":"72102D3115000000","area":"A","kind":"jiko","k":"オ","t":"互いの立場や意図をはっきりさせながら，計画的に話し合うこと。"},{"c":"72102D3121000000","area":"A","kind":"act","k":"ア","t":"資料を提示しながら説明や報告をしたり，それらを聞いて助言や提案をしたりすること。"},{"c":"72102D3122000000","area":"A","kind":"act","k":"イ","t":"調べたことやまとめたことについて，討論などをすること。"},{"c":"72102D3123000000","area":"A","kind":"act","k":"ウ","t":"事物や人物を推薦したり，それを聞いたりすること。"},{"c":"72102D3211000000","area":"B","kind":"jiko","k":"ア","t":"考えたことなどから書くことを決め，目的や意図に応じて，書く事柄を収集し，全体を見通して事柄を整理すること。"},{"c":"72102D3212000000","area":"B","kind":"jiko","k":"イ","t":"自分の考えを明確に表現するため，文章全体の構成の効果を考えること。"},{"c":"72102D3213000000","area":"B","kind":"jiko","k":"ウ","t":"事実と感想，意見などとを区別するとともに，目的や意図に応じて簡単に書いたり詳しく書いたりすること。"},{"c":"72102D3214000000","area":"B","kind":"jiko","k":"エ","t":"引用したり，図表やグラフなどを用いたりして，自分の考えが伝わるように書くこと。"},{"c":"72102D3215000000","area":"B","kind":"jiko","k":"オ","t":"表現の効果などについて確かめたり工夫したりすること。"},{"c":"72102D3216000000","area":"B","kind":"jiko","k":"カ","t":"書いたものを発表し合い，表現の仕方に着目して助言し合うこと。"},{"c":"72102D3221000000","area":"B","kind":"act","k":"ア","t":"経験したこと，想像したことなどを基に，詩や短歌，俳句をつくったり，物語や随筆などを書いたりすること。"},{"c":"72102D3222000000","area":"B","kind":"act","k":"イ","t":"自分の課題について調べ，意見を記述した文章や活動を報告した文章などを書いたり編集したりすること。"},{"c":"72102D3223000000","area":"B","kind":"act","k":"ウ","t":"事物のよさを多くの人に伝えるための文章を書くこと。"},{"c":"72103D3311000000","area":"C","kind":"jiko","k":"ア","t":"自分の思いや考えが伝わるように音読や朗読をすること。"},{"c":"72103D3312000000","area":"C","kind":"jiko","k":"イ","t":"目的に応じて，本や文章を比べて読むなど効果的な読み方を工夫すること。"},{"c":"72103D3313000000","area":"C","kind":"jiko","k":"ウ","t":"目的に応じて，文章の内容を的確に押さえて要旨をとらえたり，事実と感想，意見などとの関係を押さえ，自分の考えを明確にしながら読んだりすること。"},{"c":"72103D3314000000","area":"C","kind":"jiko","k":"エ","t":"登場人物の相互関係や心情，場面についての描写をとらえ，優れた叙述について自分の考えをまとめること。"},{"c":"72103D3315000000","area":"C","kind":"jiko","k":"オ","t":"本や文章を読んで考えたことを発表し合い，自分の考えを広げたり深めたりすること。"},{"c":"72103D3316000000","area":"C","kind":"jiko","k":"カ","t":"目的に応じて，複数の本や文章などを選んで比べて読むこと。"},{"c":"72103D3321000000","area":"C","kind":"act","k":"ア","t":"伝記を読み，自分の生き方について考えること。"},{"c":"72103D3322000000","area":"C","kind":"act","k":"イ","t":"自分の課題を解決するために，意見を述べた文章や解説の文章などを利用すること。"},{"c":"72103D3323000000","area":"C","kind":"act","k":"ウ","t":"編集の仕方や記事の書き方に注意して新聞を読むこと。"},{"c":"72103D3324000000","area":"C","kind":"act","k":"エ","t":"本を読んで推薦の文章を書くこと。"},{"c":"72103D3411100000","area":"T","kind":"jiko","g":"ア","k":"ア","t":"親しみやすい古文や漢文，近代以降の文語調の文章について，内容の大体を知り，音読すること。"},{"c":"72103D3411200000","area":"T","kind":"jiko","g":"ア","k":"イ","t":"古典について解説した文章を読み，昔の人のものの見方や感じ方を知ること。"},{"c":"72103D3412100000","area":"T","kind":"jiko","g":"イ","k":"ア","t":"話し言葉と書き言葉との違いに気付くこと。"},{"c":"72103D3412200000","area":"T","kind":"jiko","g":"イ","k":"イ","t":"時間の経過による言葉の変化や世代による言葉の違いに気付くこと。"},{"c":"72103D3412300000","area":"T","kind":"jiko","g":"イ","k":"ウ","t":"送り仮名や仮名遣いに注意して正しく書くこと。"},{"c":"72103D3412400000","area":"T","kind":"jiko","g":"イ","k":"エ","t":"語句の構成，変化などについての理解を深め，また，語句の由来などに関心をもつこと。"},{"c":"72103D3412500000","area":"T","kind":"jiko","g":"イ","k":"オ","t":"文章の中での語句と語句との関係を理解すること。"},{"c":"72103D3412600000","area":"T","kind":"jiko","g":"イ","k":"カ","t":"語感，言葉の使い方に対する感覚などについて関心をもつこと。"},{"c":"72103D3412700000","area":"T","kind":"jiko","g":"イ","k":"キ","t":"文や文章にはいろいろな構成があることについて理解すること。"},{"c":"72103D3412800000","area":"T","kind":"jiko","g":"イ","k":"ク","t":"日常よく使われる敬語の使い方に慣れること。"},{"c":"72103D3412900000","area":"T","kind":"jiko","g":"イ","k":"ケ","t":"比喩や反復などの表現の工夫に気付くこと。"},{"c":"72103D3413100000","area":"T","kind":"jiko","g":"ウ","k":"ア","t":"第５学年及び第６学年の各学年においては，学年別漢字配当表の当該学年までに配当されている漢字を読むこと。また，当該学年の前の学年までに配当されている漢字を書き，文や文章の中で使うとともに，当該学年に配当されている漢字を漸次書き，文や文章の中で使うこと。"},{"c":"72103D3413200000","area":"T","kind":"jiko","g":"ウ","k":"イ","t":"仮名及び漢字の由来，特質などについて理解すること。"},{"c":"72100D3421000000","area":"S","kind":"jiko","k":"ア","t":"用紙全体との関係に注意し，文字の大きさや配列などを決めるとともに，書く速さを意識して書くこと。"},{"c":"72101D3422000000","area":"S","kind":"jiko","k":"イ","t":"目的に応じて使用する筆記具を選び，その特徴を生かして書くこと。"},{"c":"72102D3423000000","area":"S","kind":"jiko","k":"ウ","t":"毛筆を使用して，穂先の動きと点画のつながりを意識して書くこと。"}]}}},"kyoka_chu":{"lead":"言葉による見方・考え方を働かせ，言語活動を通して，国語で正確に理解し適切に表現する資質・能力を次のとおり育成することを目指す。","mokuhyo":[{"c":"8310100100000000","t":"社会生活に必要な国語について，その特質を理解し適切に使うことができるようにする。"},{"c":"8310100200000000","t":"社会生活における人との関わりの中で伝え合う力を高め，思考力や想像力を養う。"},{"c":"8310100300000000","t":"言葉がもつ価値を認識するとともに，言語感覚を豊かにし，我が国の言語文化に関わり，国語を尊重してその能力の向上を図る態度を養う。"}],"c":"8310100000000000"}}</script>
+<script type="application/json" id="dy-units">{"src":"","grades":{}}</script>
+<script type="application/json" id="dy-extra">{
+ "hist": [
+  {
+   "year": "1947",
+   "when": "昭和22年試案 → 1947年度から",
+   "name": "国語科（小・中学校をいっしょにした試案）",
+   "parts": [
+    "話すこと（聞くことをふくむ）",
+    "つづること（作文）",
+    "読むこと（文学をふくむ）",
+    "書くこと（習字をふくむ）",
+    "文法"
+   ],
+   "points": [
+    "聞く・話す・読む・つづるの4つのことばの活動を中心にすえた",
+    "1〜3年と4〜6年の2つの段階に分けて、指導のしかたを示した",
+    "辞書の使い方や学校新聞づくりにもふれている"
+   ],
+   "src": "学習指導要領 国語科編（試案）昭和22年度 第一章（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/s22ejj/chap1.htm"
+  },
+  {
+   "year": "1951",
+   "when": "昭和26年試案（改訂版）",
+   "name": "国語科（小学校だけの1冊）",
+   "parts": [
+    "聞くこと",
+    "話すこと",
+    "読むこと",
+    "書くこと（作文）",
+    "書くこと（書き方）",
+    "習字（毛筆）",
+    "ローマ字"
+   ],
+   "points": [
+    "小学校だけで1冊にし、幼稚園から6年までを7つの段階に分けて書いた",
+    "学年ごとに身につけたい力を表にした「国語能力表」をのせた",
+    "習字（毛筆）とローマ字の指導の章ができた"
+   ],
+   "src": "小学校学習指導要領 国語科編（試案）改訂版 昭和26年 はしがき・目次・第五章（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/s26eja/index.htm"
+  },
+  {
+   "year": "1958",
+   "when": "昭和33年告示 → 1961年度から",
+   "name": "国語（告示の学習指導要領）",
+   "parts": [
+    "Ａ 聞くこと、話すこと、読むこと、書くこと",
+    "Ｂ ことばに関する事項"
+   ],
+   "points": [
+    "学年別漢字配当表（881字）ができた",
+    "聞く・話すは低学年から十分に指導し、読む・書くは学年が上がるほど重くする",
+    "毛筆の書写は、学校の判断で4年以上、年35時間までで行える",
+    "ローマ字は4年で年20時間、5・6年で年10時間ほど"
+   ],
+   "src": "小学校学習指導要領 昭和33年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/s33e/chap2-1.htm"
+  },
+  {
+   "year": "1968",
+   "when": "昭和43年告示 → 1971年度から",
+   "name": "国語（3つの領域）",
+   "parts": [
+    "Ａ 聞くこと、話すこと",
+    "Ｂ 読むこと",
+    "Ｃ 書くこと（書写をふくむ）",
+    "（各領域の中に）ことばに関する事項"
+   ],
+   "points": [
+    "聞く・話す、読む、書くの3つの領域に分けた",
+    "毛筆の書写を3年以上の全学年で行う（年20時間ほど）。硬筆は全学年",
+    "作文を主にした指導に、国語の時間の2〜3割ほどをあてる"
+   ],
+   "src": "小学校学習指導要領 昭和43年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/s43e/chap2-1.htm"
+  },
+  {
+   "year": "1977",
+   "when": "昭和52年告示 → 1980年度から",
+   "name": "国語（表現・理解と言語事項）",
+   "parts": [
+    "Ａ 表現（話す・書く）",
+    "Ｂ 理解（聞く・読む）",
+    "〔言語事項〕（書写をふくむ）"
+   ],
+   "points": [
+    "3領域を「表現」と「理解」の2つにまとめ、ことばのきまりを〔言語事項〕として別に立てた",
+    "目標を1つの文にまとめた（理解・表現の力、関心、言語感覚、国語を尊重する態度）",
+    "漢字配当表は996字。毛筆の書写は3年以上で年20単位時間ほど",
+    "作文と書写は、それだけを取り出して指導してもよい"
+   ],
+   "src": "小学校学習指導要領 昭和52年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/s52e/chap2-1.htm"
+  },
+  {
+   "year": "1989",
+   "when": "平成元年告示 → 1992年度から",
+   "name": "国語（表現・理解と言語事項）",
+   "parts": [
+    "Ａ 表現",
+    "Ｂ 理解",
+    "〔言語事項〕（書写をふくむ）"
+   ],
+   "points": [
+    "目標に「思考力や想像力及び言語感覚を養い」と書かれた",
+    "作文を主にした指導は、1〜4年で年105時間、5・6年で年70時間ほど",
+    "話す・聞くの指導を、意図的・計画的に行うよう求めた",
+    "漢字配当表は1006字。毛筆の書写は年35単位時間ほど"
+   ],
+   "src": "小学校学習指導要領 平成元年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/h01e/chap2-1.htm"
+  },
+  {
+   "year": "1998",
+   "when": "平成10年告示 → 2002年度から",
+   "name": "国語（3領域と言語事項・2学年まとめ）",
+   "parts": [
+    "Ａ 話すこと・聞くこと",
+    "Ｂ 書くこと",
+    "Ｃ 読むこと",
+    "〔言語事項〕（書写をふくむ）"
+   ],
+   "points": [
+    "目標に「伝え合う力を高める」が入った",
+    "目標と内容を2学年ずつまとめて示した",
+    "話す・聞くに年30（5・6年は25）時間、書くに年90〜55時間ほどをあてる",
+    "毛筆の書写は年30単位時間ほど"
+   ],
+   "src": "小学校学習指導要領 平成10年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/h10e/chap2-1.htm"
+  },
+  {
+   "year": "2008",
+   "when": "平成20年告示 → 2011年度から",
+   "name": "国語（3領域と伝統的な言語文化）",
+   "parts": [
+    "Ａ 話すこと・聞くこと",
+    "Ｂ 書くこと",
+    "Ｃ 読むこと",
+    "〔伝統的な言語文化と国語の特質に関する事項〕（書写をふくむ）"
+   ],
+   "points": [
+    "〔言語事項〕が〔伝統的な言語文化と国語の特質に関する事項〕に変わった",
+    "昔話・神話（低学年）、短歌・俳句（中学年）、古文・漢文の音読（高学年）が入った",
+    "各領域に「言語活動例」を示した",
+    "話す・聞くは年35〜25時間、書くは年100〜55時間ほど。ローマ字は3年に"
+   ],
+   "src": "小学校学習指導要領 平成20年 第2章第1節 国語（国立教育政策研究所データベース）",
+   "url": "https://erid.nier.go.jp/files/COFS/h19e/chap2-1.htm"
+  },
+  {
+   "year": "2017",
+   "when": "平成29年告示 → 2020年度から",
+   "name": "国語（知識及び技能／思考力、判断力、表現力等）",
+   "parts": [
+    "〔知識及び技能〕(1)言葉の特徴や使い方 (2)情報の扱い方 (3)我が国の言語文化（書写をふくむ）",
+    "〔思考力、判断力、表現力等〕Ａ 話すこと・聞くこと",
+    "Ｂ 書くこと",
+    "Ｃ 読むこと"
+   ],
+   "points": [
+    "内容を資質・能力の柱で組み直し、「情報の扱い方」が新しく入った",
+    "目標に「言葉による見方・考え方を働かせ」が入った",
+    "漢字配当表は1026字（4年に都道府県名の漢字20字を加えた）",
+    "話す・聞くは年35〜25時間、書くは年100〜55時間、毛筆は年30単位時間ほど"
+   ],
+   "src": "小学校学習指導要領 平成29年 第2章第1節 国語（国立教育政策研究所データベース）／国語ワーキンググループ取りまとめ（案）参考資料",
+   "url": "https://erid.nier.go.jp/files/COFS/h29e/chap2-1.htm"
+  },
+  {
+   "year": "次",
+   "when": "2030年度から（想定）",
+   "next": true,
+   "name": "次の学習指導要領（いま審議中）",
+   "parts": [
+    "〔知識及び技能〕(1)運用しながら深める事項 (2)教養として深める事項（案）",
+    "〔思考力、判断力、表現力等〕を「話や文章の機能」でくくる（案）",
+    "Ａ 話すこと・聞くこと／Ｂ 書くこと／Ｃ 読むこと"
+   ],
+   "points": [
+    "国語科を、言葉を手がかりに考えや思いを広げ深め、伝え合う教科として組み直す案",
+    "4つの「話や文章の機能」で、話す・聞く・書く・読むの学びをつなぐ案",
+    "小学校では手書きによる書写を大切にする案",
+    "くわしくは「次の改訂」へ"
+   ],
+   "src": "中教審 国語ワーキンググループ取りまとめ（案）2026-08-04・教育課程部会 審議まとめ 2026-10-05",
+   "url": "https://www.mext.go.jp/b_menu/shingi/chukyo/chukyo3/004/gaiyou/1292164_00001.htm"
+  }
+ ],
+ "histfig": {
+  "cols": [
+   "1947",
+   "1951",
+   "1958",
+   "1968",
+   "1977",
+   "1989",
+   "1998",
+   "2008",
+   "2017",
+   "次"
+  ],
+  "lanes": [
+   {
+    "n": "名前・まとめ方",
+    "seg": [
+     [
+      "1947",
+      "1947",
+      "5つの部門"
+     ],
+     [
+      "1951",
+      "1951",
+      "能力表・7段階"
+     ],
+     [
+      "1958",
+      "1958",
+      "Ａ活動＋Ｂことば"
+     ],
+     [
+      "1968",
+      "1968",
+      "3つの領域"
+     ],
+     [
+      "1977",
+      "1989",
+      "表現・理解の2領域"
+     ],
+     [
+      "1998",
+      "2008",
+      "3領域・2学年ずつ"
+     ],
+     [
+      "2017",
+      "2017",
+      "知識・技能＋思考力等"
+     ],
+     [
+      "次",
+      "次",
+      "話や文章の機能（案）"
+     ]
+    ]
+   },
+   {
+    "n": "話す・聞く",
+    "seg": [
+     [
+      "1947",
+      "1947",
+      "話すこと（聞く含む）"
+     ],
+     [
+      "1951",
+      "1951",
+      "聞くこと／話すこと"
+     ],
+     [
+      "1958",
+      "1958",
+      "Ａの中の聞く・話す"
+     ],
+     [
+      "1968",
+      "1968",
+      "Ａ聞くこと、話すこと"
+     ],
+     [
+      "1977",
+      "1989",
+      "表現と理解に分かれる"
+     ],
+     [
+      "1998",
+      "2017",
+      "Ａ話すこと・聞くこと"
+     ],
+     [
+      "次",
+      "次",
+      "話し合いも機能で（案）"
+     ]
+    ]
+   },
+   {
+    "n": "書く（作文）",
+    "seg": [
+     [
+      "1947",
+      "1947",
+      "つづること（作文）"
+     ],
+     [
+      "1951",
+      "1951",
+      "書くこと（作文）"
+     ],
+     [
+      "1958",
+      "1958",
+      "Ａの中の書くこと"
+     ],
+     [
+      "1968",
+      "1968",
+      "Ｃ書くこと"
+     ],
+     [
+      "1977",
+      "1989",
+      "表現の中の作文"
+     ],
+     [
+      "1998",
+      "2017",
+      "Ｂ書くこと"
+     ],
+     [
+      "次",
+      "次",
+      "機能でくくる（案）"
+     ]
+    ]
+   },
+   {
+    "n": "読む",
+    "seg": [
+     [
+      "1947",
+      "1951",
+      "読むこと"
+     ],
+     [
+      "1958",
+      "1958",
+      "Ａの中の読むこと"
+     ],
+     [
+      "1968",
+      "1968",
+      "Ｂ読むこと"
+     ],
+     [
+      "1977",
+      "1989",
+      "理解の中の読む"
+     ],
+     [
+      "1998",
+      "2017",
+      "Ｃ読むこと"
+     ],
+     [
+      "次",
+      "次",
+      "自分で読む力へ（案）"
+     ]
+    ]
+   },
+   {
+    "n": "言葉のきまり",
+    "seg": [
+     [
+      "1947",
+      "1947",
+      "文法"
+     ],
+     [
+      "1951",
+      "1951",
+      "ローマ字の章"
+     ],
+     [
+      "1958",
+      "1958",
+      "Ｂことばに関する事項"
+     ],
+     [
+      "1968",
+      "1968",
+      "各領域の中に"
+     ],
+     [
+      "1977",
+      "1998",
+      "〔言語事項〕"
+     ],
+     [
+      "2008",
+      "2008",
+      "伝統的な言語文化…"
+     ],
+     [
+      "2017",
+      "2017",
+      "知識及び技能(1)〜(3)"
+     ],
+     [
+      "次",
+      "次",
+      "運用と教養の2つ（案）"
+     ]
+    ]
+   },
+   {
+    "n": "書写",
+    "seg": [
+     [
+      "1947",
+      "1947",
+      "習字をふくむ"
+     ],
+     [
+      "1951",
+      "1951",
+      "書き方＋習字の章"
+     ],
+     [
+      "1958",
+      "1958",
+      "毛筆は4年〜・選べる"
+     ],
+     [
+      "1968",
+      "1977",
+      "毛筆3年〜・20時間"
+     ],
+     [
+      "1989",
+      "1989",
+      "毛筆35時間"
+     ],
+     [
+      "1998",
+      "2017",
+      "毛筆30時間"
+     ],
+     [
+      "次",
+      "次",
+      "手書きを大切に（案）"
+     ]
+    ]
+   }
+  ]
+ },
+ "next": {
+  "asof": "2026年11月3日",
+  "status": "2026年10月5日に中教審の教育課程部会が「次期学習指導要領等に向けた審議まとめ」をまとめ、今は意見募集（11月5日まで）の段階。答申と告示はまだで、日付は未定。国語は国語ワーキンググループの案がもとになっており、小学校の全面実施は2030年度の想定。",
+  "steps": [
+   {
+    "d": "2024年12月",
+    "t": "中教審へ諮問"
+   },
+   {
+    "d": "2025年9月",
+    "t": "論点整理"
+   },
+   {
+    "d": "2025年9月〜2026年7月",
+    "t": "国語ワーキンググループ（12回）"
+   },
+   {
+    "d": "2026年10月",
+    "t": "審議まとめ・意見募集",
+    "now": true
+   },
+   {
+    "d": "これから",
+    "t": "答申・告示（日付は未定）"
+   },
+   {
+    "d": "2028年度〜",
+    "t": "先行実施（案）"
+   },
+   {
+    "d": "2030年度",
+    "t": "小学校で全面実施（想定）"
+   }
+  ],
+  "items": [
+   {
+    "t": "文部科学大臣が中教審に、次の学習指導要領について諮問した。",
+    "kind": "決定",
+    "date": "2024-12-25",
+    "src": "諮問「初等中等教育における教育課程の基準等の在り方について」",
+    "url": "https://www.mext.go.jp/b_menu/shingi/chukyo/chukyo0/toushin/mext_00003.html"
+   },
+   {
+    "t": "教育課程企画特別部会が「論点整理」をまとめた。",
+    "kind": "決定",
+    "date": "2025-09-25",
+    "src": "教育課程企画特別部会 論点整理（文部科学省の紹介ページ）",
+    "url": "https://www.mext.go.jp/studxstyle/special/105.html"
+   },
+   {
+    "t": "国語ワーキンググループが審議した（第1回 2025-09-29 〜 第12回 2026-07-24）。2026-08-04付で取りまとめ（案）の会議後修正版を公表。",
+    "kind": "決定",
+    "date": "2026-08-04",
+    "src": "教育課程部会 国語ワーキンググループ（開催状況・報告等）",
+    "url": "https://www.mext.go.jp/b_menu/shingi/chukyo/chukyo3/107/index.html"
+   },
+   {
+    "t": "教育課程部会が「次期学習指導要領等に向けた審議まとめ」をまとめた。国語ワーキンググループの案は、ほぼそのまま第2部「国語」に入っている。",
+    "kind": "決定",
+    "date": "2026-10-05",
+    "src": "次期学習指導要領等に向けた審議まとめ（公表ページ）",
+    "url": "https://www.mext.go.jp/b_menu/shingi/chukyo/chukyo3/004/gaiyou/1292164_00001.htm"
+   },
+   {
+    "t": "審議まとめへの意見募集（パブリック・コメント）は 2026-10-06 〜 11-05。今は募集中。",
+    "kind": "決定",
+    "date": "2026-10-06",
+    "src": "文部科学省 報道発表",
+    "url": "https://www.mext.go.jp/b_menu/houdou/mext_01690.html"
+   },
+   {
+    "t": "答申と告示の日付は、一次資料では確かめられなかった（未定）。",
+    "kind": "未確認",
+    "date": "未定",
+    "src": "未確認（一次資料で日付の明記を見つけられず）",
+    "url": ""
+   },
+   {
+    "t": "全面実施は小学校が令和12年度（2030年度）、中学校が令和13年度（2031年度）を想定。令和10年度（2028年度）から先行実施の期間とする方向。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "国語科を「言葉を手がかりに、相手や状況・目的に応じて、話や文章を理解して考えや思いを広げ深め、よりよく表現し伝え合う力を育てる教科」として組み直す。目標と見方・考え方は小・中・高で一貫して示す。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "話す・聞く・書く・読むの学びを「話や文章の機能」でつなぐ。機能は「事実や知識の整理と理解」「考えや主張の理由付けと吟味」「思いや経験の表出と想像」「協働による考えの深化や合意」（いずれも仮称）。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "今は領域ごとに細かく分かれている学習の過程（読むことの「構造と内容の把握」「精査・解釈」など）をまとめ直す。話す・書く＝考えの形成／表現・推敲、聞く・読む＝構造と内容の理解・解釈／考えの形成。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "〔知識及び技能〕を「(1)運用しながら深める事項」と「(2)教養として深める事項」の2つに整理し直す。例：漢字の読み書きと、へん・つくりや成り立ちを1つの事項にまとめる。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "「情報の扱い方」は、情報どうしの関係を整理する力と、情報の信頼性・妥当性を見きわめる力の2つを、学年に応じて示す。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "語彙は、文脈の中で使いながら語感をみがく学習と、語句の意味や関係を理解して語彙を豊かにする学習の両方を進める。読書は、きっかけづくりと、自分で読む力へのつなぎを大切にする。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "書写は小・中学校で引き続き重視し、とくに小学校では手書きによる書写をていねいに指導する。書くことが苦手な子には、デジタルや代わりの方法を積極的に用いる。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "ローマ字は今と同じく国語科で小学校3年に学ぶ。ローマ字入力のタイピングは「総合的な学習の時間・情報の領域（仮称）」を中心に学ぶ。",
+    "kind": "案",
+    "date": "2026-08-04",
+    "src": "国語ワーキンググループ取りまとめ（案）会議後修正",
+    "url": "https://www.mext.go.jp/content/20260804-mxt_kyoiku01-000051394_1.pdf"
+   },
+   {
+    "t": "学年の区分は一定示しつつ、学校の判断で学年をこえて指導の時期を前後させられるようにする。領域ごとの時数の目安の示し方は、告示文を整える中で検討。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "国語科も「調整授業時数制度」の対象とする。「裁量的な時間」の例として、語彙・辞書のプログラム、ビブリオバトルや読書会、演劇・文芸創作などをあげている。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   },
+   {
+    "t": "評価は、学習の途中は形成的評価で学びの改善に生かし、単元のまとまりで〔思考力、判断力、表現力等〕が総合的に発揮されているかを見る方向。",
+    "kind": "案",
+    "date": "2026-10-05",
+    "src": "中教審 教育課程部会「次期学習指導要領等に向けた審議まとめ」（第1・2部）第2部 国語",
+    "url": "https://www.mext.go.jp/content/20261005-mxt_kyoiku01-000052360-1.pdf"
+   }
+  ]
+ },
+ "src_extra": "歩みは国立教育政策研究所「学習指導要領データベース」の各版の本文、次の改訂は中央教育審議会（国語ワーキンググループ・教育課程部会）の資料をもとにまとめたもの"
+}</script>
+<script>
+(function(){
+const D=JSON.parse(document.getElementById('dy-data').textContent);
+const U=JSON.parse(document.getElementById('dy-units').textContent);
+const E=JSON.parse(document.getElementById('dy-extra').textContent);
+// 光村の単元データが無い版（公開用）では、「単元」「1年の地図」を出さない
+const HAS_U=!!(U.grades&&Object.keys(U.grades).length);
+const BANDS=[['12','1・2年'],['34','3・4年'],['56','5・6年']];
+const BNAME={'12':'1・2年','34':'3・4年','56':'5・6年','中1':'中1','中2':'中2','中3':'中3'};
+const KEI={sho:['12','34','56'],chu:['56','中1','中2','中3']};
+const GRADES=['1','2','3','4','5','6'];
+const bandOf=g=>g<=2?'12':g<=4?'34':'56';
+const AREAS=[
+ {id:'goal',g:'',n:'目標'},
+ {id:'知1',g:'知識及び技能',n:'(1) 言葉の特徴や使い方'},
+ {id:'知2',g:'知識及び技能',n:'(2) 情報の扱い方'},
+ {id:'知3',g:'知識及び技能',n:'(3) 我が国の言語文化'},
+ {id:'A',g:'思考力，判断力，表現力等',n:'A 話すこと・聞くこと'},
+ {id:'B',g:'思考力，判断力，表現力等',n:'B 書くこと'},
+ {id:'C',g:'思考力，判断力，表現力等',n:'C 読むこと'}];
+// 指導案・授業メイトで使う呼び名（授業メイトの見本と同じ形）
+function label(it){
+ if(it.area[0]==='知') return '知識及び技能 ('+it.area[1]+') '+it.k;
+ const a=AREAS.find(x=>x.id===it.area).n;
+ return a+' ('+(it.kind==='act'?2:1)+') '+it.k;
+}
+const ALL={};  // コード → 項目
+Object.keys(D.bands).forEach(b=>D.bands[b].items.forEach(it=>{it.band=b;ALL[it.c]=it;}));
+const USE={};  // コード → 扱う単元 [{g,i,main}]
+GRADES.forEach(g=>(U.grades[g]||[]).forEach((u,i)=>u.aim.forEach(a=>a.c.forEach(c=>{(USE[c]=USE[c]||[]);if(!USE[c].some(x=>x.g===g&&x.i===i))USE[c].push({g,i,main:a.main});}))));
+const uname=u=>u.title[0];
+// 目指す力（領域）：A話す・聞く B書く C読む K知識・技能。時数（sp）と目標（aim）から
+const DOMS=[['A','話す・聞く','話'],['B','書く','書'],['C','読む','読'],['K','知識・技能','知']];
+const domOf=c=>{const a=ALL[c].area;return a[0]==='知'?'K':a;};
+function unitDoms(u){
+ const r={};
+ Object.keys(u.sp||{}).forEach(k=>{const d=k==='知'?'K':k;(r[d]=r[d]||{main:false,h:0}).h+=u.sp[k];});
+ u.aim.forEach(a=>a.c.forEach(c=>{const d=domOf(c);r[d]=r[d]||{main:false,h:0};if(a.main)r[d].main=true;}));
+ return r;
+}
+function tagsHTML(u){
+ const r=unitDoms(u);
+ return '<span class="dy-tags">'+DOMS.filter(d=>r[d[0]]).map(d=>'<span class="dy-tag '+d[0]+(r[d[0]].main?' on':'')+'" title="'+d[1]+'">'+d[2]+(r[d[0]].main?'◎':'')+'</span>').join('')+'</span>';
+}
+// 月：'９月〜10月' → 9（はじまりの月）
+const monthOf=m=>+m.normalize('NFKC').split('〜')[0].replace(/[^0-9]/g,'');
+// 3学期制・2学期制のどちらでも通じるよう、月で区切る
+const TERMS=[['1','4〜7月',[4,5,6,7]],['2','9〜12月',[9,10,11,12]],['3','1〜3月',[1,2,3]]];
+const termNow=()=>{const m=new Date().getMonth()+1;return m>=4&&m<=8?'1':m>=9?'2':'3';};
+const S={mode:'unit',grade:'6',ui:0,band:'56',area:'C',kei:false,keiR:'sho',q:'',pick:[],hit:'',term:termNow(),hist:'fig',hy:-1};
+try{const o=JSON.parse(localStorage.getItem('dy-state')||'{}');['mode','grade','ui','band','area'].forEach(k=>{if(o[k]!=null)S[k]=o[k];});}catch(e){}
+if(!HAS_U){if(S.mode==='unit'||S.mode==='map')S.mode='yoryo';document.querySelectorAll('[data-m=unit],[data-m=map]').forEach(b=>b.remove());}
+else if(!U.grades[S.grade]||!U.grades[S.grade][S.ui])S.ui=0;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hl(t){const e=esc(t);if(!S.q)return e;const q=esc(S.q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return e.replace(new RegExp(q,'g'),'<mark>$&</mark>');}
+function save(){try{localStorage.setItem('dy-state',JSON.stringify({mode:S.mode,grade:S.grade,ui:S.ui,band:S.band,area:S.area}));}catch(e){}}
+
+/* ---------- 指導事項から ---------- */
+function usedLine(c){
+ const us=(USE[c]||[]).slice().sort((a,b)=>(b.main-a.main)||(a.g-b.g)||(a.i-b.i));
+ if(!us.length)return '';
+ const MAX=6,s=us.slice(0,MAX).map(x=>x.g+'年'+(x.main?'◎':'')+uname(U.grades[x.g][x.i])).join('　');
+ return '<span class="u">単元：'+esc(s)+(us.length>MAX?' ほか':'')+'</span>';
+}
+function itemHTML(it,showBand,noUse){
+ const on=S.pick.includes(it.c);
+ const subs=it.subs?'<ol>'+it.subs.map(s=>'<li>（'+s.k+'）'+hl(s.t)+'</li>').join('')+'</ol>':'';
+ const w=showBand?'<span class="w">'+BNAME[it.band]+'　'+esc(label(it))+'</span>':'';
+ return '<button class="dy-it'+(S.hit===it.c?' hit':'')+'" data-c="'+it.c+'" aria-pressed="'+on+'"><span class="k">'+it.k+'</span><span>'+w+hl(it.t)+subs+(noUse?'':usedLine(it.c))+'</span><span class="ck" aria-hidden="true"></span></button>';
+}
+function bandBlock(b){
+ const its=D.bands[b].items.filter(x=>x.area===S.area);
+ const j=its.filter(x=>x.kind==='jiko'),a=its.filter(x=>x.kind==='act');
+ let h=j.map(x=>itemHTML(x)).join('');
+ if(a.length) h+='<div class="dy-sub">言語活動の例</div><div class="dy-act">'+a.map(x=>itemHTML(x)).join('')+'</div>';
+ return h;
+}
+// 系統：指導事項・言語活動の例を、記号（ア・イ…）ごとに横一列
+function keiRows(cols){
+ let h='';
+ [['jiko',''],['act','言語活動の例']].forEach(([kind,name])=>{
+  const per=cols.map(b=>D.bands[b].items.filter(x=>x.area===S.area&&x.kind===kind));
+  const n=Math.max(...per.map(a=>a.length));if(!n)return;
+  if(name)h+='<div class="dy-sub dy-subrow">'+name+'</div>';
+  for(let i=0;i<n;i++)per.forEach(a=>{h+=a[i]?itemHTML(a[i],false,true):'<div class="dy-empty"></div>';});
+ });
+ return h;
+}
+function goalBlock(b){
+ return '<div class="dy-goal">'+D.bands[b].mokuhyo.map(m=>'<p>'+hl(m.t)+'</p>').join('')+'</div>';
+}
+function renderYoryo(){
+ $('dy-band').innerHTML=BANDS.map(b=>'<button data-b="'+b[0]+'" aria-pressed="'+(!S.q&&!S.kei&&S.band===b[0])+'"'+(S.kei||S.q?' disabled':'')+'>'+b[1]+'</button>').join('');
+ $('dy-kei').setAttribute('aria-pressed',S.kei);
+ let g='';
+ $('dy-nav').innerHTML=AREAS.map(a=>{let h='';if(a.g!==g){g=a.g;if(g)h+='<h2>'+g+'</h2>';}
+  return h+'<button data-a="'+a.id+'" aria-pressed="'+(!S.q&&S.area===a.id)+'">'+a.n+'</button>';}).join('');
+ const A=AREAS.find(a=>a.id===S.area);
+ if(S.q){
+  const hits=Object.values(ALL).filter(x=>(x.t+(x.subs||[]).map(s=>s.t).join('')).includes(S.q));
+  $('dy-ttl').innerHTML='<b>「'+esc(S.q)+'」</b><span>1〜6年から さがしました</span>';
+  $('dy-list').innerHTML=hits.length?hits.map(x=>itemHTML(x,true)).join(''):'<div class="dy-none">見つかりませんでした</div>';
+ }else if(S.kei){
+  const cols=KEI[S.keiR];
+  $('dy-ttl').innerHTML='<b>'+(A.g?A.g+'　':'')+A.n+'</b><span class="dy-sp2"></span><div class="dy-seg" role="group" aria-label="ならべる学年"><button data-kr="sho" aria-pressed="'+(S.keiR==='sho')+'">小1〜6年</button><button data-kr="chu" aria-pressed="'+(S.keiR==='chu')+'">5・6年→中学校</button></div>';
+  $('dy-list').innerHTML='<div class="dy-cols" style="grid-template-columns:repeat('+cols.length+',minmax(0,1fr))">'+cols.map(b=>'<div class="dy-colh'+(b===S.band?' now':'')+'">'+BNAME[b]+'</div>').join('')+(S.area==='goal'?cols.map(b=>goalBlock(b)).join(''):keiRows(cols))+'</div>';
+ }else{
+  const bn=BANDS.find(b=>b[0]===S.band)[1];
+  $('dy-ttl').innerHTML='<b>'+(A.g?A.g+'　':'')+A.n+'</b><span>'+bn+'</span>';
+  $('dy-list').innerHTML=S.area==='goal'?goalBlock(S.band):bandBlock(S.band);
+ }
+}
+
+/* ---------- 単元から（光村図書） ---------- */
+function unitHits(){
+ const us=U.grades[S.grade].map((u,i)=>({u,i}));
+ if(!S.q)return us;
+ return us.filter(({u})=>(u.unit+u.title.join('')+u.act.join('')).includes(S.q));
+}
+function renderUnit(){
+ $('dy-band').innerHTML=GRADES.map(g=>'<button data-g="'+g+'" aria-pressed="'+(S.grade===g)+'">'+g+'年</button>').join('');
+ let m='';
+ const list=unitHits();
+ $('dy-nav').innerHTML=list.length?list.map(({u,i})=>{let h='';if(u.m!==m){m=u.m;h+='<h2>'+esc(m)+'</h2>';}
+  return h+'<button class="dy-un" data-u="'+i+'" aria-pressed="'+(S.ui===i)+'">'+hl(uname(u))+'<span class="h">'+u.h+'時間</span>'+tagsHTML(u)+'</button>';}).join(''):'<div class="dy-none">見つかりませんでした</div>';
+ const u=U.grades[S.grade][S.ui];
+ $('dy-ttl').innerHTML='<b>'+esc(u.title.join('　'))+'</b><span>'+S.grade+'年・'+esc(u.m)+'・'+u.h+'時間</span>'+tagsHTML(u);
+ let h='';
+ if(u.unit)h+='<div class="dy-unit">'+hl(u.unit)+'</div>';
+ h+='<div class="dy-sub">目指すこと</div>';
+ u.aim.forEach(a=>a.c.forEach(c=>{const x=ALL[c];
+  h+='<button class="dy-it dy-aim'+(a.main?' main':'')+'" data-go="'+c+'"><span class="dy-mk'+(a.main?' on':'')+'">'+(a.main?'◎重点':'○')+'</span><span><span class="w">'+esc(label(x))+'</span><span class="t">'+hl(x.t)+'</span></span><span class="dy-go" aria-hidden="true">›</span></button>';}));
+ if(u.act.length)h+='<div class="dy-sub">言語活動</div>'+u.act.map(t=>'<div class="dy-li">'+hl(t)+'</div>').join('');
+ $('dy-list').innerHTML=h;
+}
+
+/* ---------- 前回とくらべる ---------- */
+// 文字のちがい（LCS）。特活の見本と同じ作り：短すぎる「同じ」は前後にまとめて、印を読みやすくする
+function lcsLen(a,b){let p=new Uint16Array(b.length+1);for(let i=a.length-1;i>=0;i--){const q=new Uint16Array(b.length+1);for(let j=b.length-1;j>=0;j--)q[j]=a[i]===b[j]?p[j+1]+1:Math.max(p[j],q[j+1]);p=q;}return p[0];}
+const sim=(a,b)=>2*lcsLen(a,b)/(a.length+b.length||1);
+const kanji=s=>s.replace(/[ぁ-ゖ，。、・「」（）\s]/g,'');
+// 組にするのは、文全体で 0.5 以上、かつ 漢字とカタカナだけでも 0.35 以上（ひらがなの「こと」「など」で近く見えるのをふせぐ）
+const near=(a,b)=>{const s=sim(a,b);return s>=0.5&&sim(kanji(a),kanji(b))>=0.35?s:0;};
+function diff(a,b){
+ const n=a.length,m=b.length,L=Array.from({length:n+1},()=>new Uint16Array(m+1));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+ let ops=[],i=0,j=0;const push=(k,c)=>{const l=ops[ops.length-1];if(l&&l[0]===k)l[1]+=c;else ops.push([k,c]);};
+ while(i<n&&j<m){if(a[i]===b[j]){push('=',a[i]);i++;j++;}else if(L[i+1][j]>=L[i][j+1]){push('-',a[i]);i++;}else{push('+',b[j]);j++;}}
+ while(i<n)push('-',a[i++]);while(j<m)push('+',b[j++]);
+ for(let k=1;k<ops.length-1;k++)if(ops[k][0]==='='&&ops[k][1].length<3){ops.splice(k,1,['-',ops[k][1]],['+',ops[k][1]]);}
+ const A=[],B=[];ops.forEach(([k,c])=>{if(k!=='+')A.push([k,c]);if(k!=='-')B.push([k,c]);});
+ const join=(x,tag)=>{let o=[];x.forEach(([k,c])=>{const l=o[o.length-1];if(l&&l[0]===k)l[1]+=c;else o.push([k,c]);});return o.map(([k,c])=>k==='='?esc(c):'<'+tag+'>'+esc(c)+'</'+tag+'>').join('');};
+ return [join(A,'del'),join(B,'ins')];
+}
+// いまの領域 → 前回のどこと並べるか
+const OLDOF={A:x=>x.area==='A',B:x=>x.area==='B',C:x=>x.area==='C',
+ '知1':x=>x.area==='T'&&(x.g==='イ'||x.g==='ウ'),'知2':()=>false,'知3':x=>(x.area==='T'&&x.g==='ア')||x.area==='S'};
+const TG={'ア':'伝統的な言語文化','イ':'言葉の特徴やきまり','ウ':'文字'};
+const oldLab=x=>x.area==='T'?'〔'+TG[x.g]+'〕('+x.k+')':x.area==='S'?'〔書写〕'+x.k:x.k;
+const fullT=x=>x.t+(x.subs?x.subs.map(s=>'（'+s.k+'）'+s.t).join(''):'');
+const CMPNOTE={
+ goal:'目標の分け方が変わりました。前回は「話す・聞く」「書く」「読む」の能力ごと、いまは「知識及び技能」「思考力，判断力，表現力等」「学びに向かう力，人間性等」の3つの柱ごとに書かれています。',
+ '知1':'前回の〔伝統的な言語文化と国語の特質に関する事項〕は、いまは〔知識及び技能〕に入りました。ここでは前回の「言葉の特徴やきまり」「文字」と並べています。',
+ '知2':'(2)「情報の扱い方」は、平成29年告示で新しくできた項目です。',
+ '知3':'前回の「伝統的な言語文化」と〔書写〕と並べています。',
+ A:'',B:'',C:''};
+// はっきり近い項目どうしだけを組にする。残りは「そのほかの項目」として、左右に記号の順で並べる（組にならない＝新しい、とは限らない）
+function pairUp(news,olds){
+ const cand=[];news.forEach((n,i)=>olds.forEach((o,j)=>{const s=near(fullT(n),fullT(o));if(s)cand.push([s,i,j]);}));
+ cand.sort((a,b)=>b[0]-a[0]);const nm={},used=new Set();
+ cand.forEach(([s,i,j])=>{if(nm[i]!=null||used.has(j))return;nm[i]=j;used.add(j);});
+ return {pairs:news.map((n,i)=>nm[i]!=null?[olds[nm[i]],n]:null).filter(Boolean),restN:news.filter((n,i)=>nm[i]==null),restO:olds.filter((o,j)=>!used.has(j))};
+}
+function cmpRows(P){
+ let h=P.pairs.map(([o,n])=>{const [a,b]=diff(fullT(o),fullT(n));return '<div><span class="k">'+esc(oldLab(o))+'</span>'+a+'</div><div><span class="k">'+n.k+'</span>'+b+'</div>';}).join('');
+ const m=Math.max(P.restN.length,P.restO.length);
+ if(m){
+  if(P.pairs.length)h+='<div class="dy-note">そのほかの項目（記号の順）</div>';
+  for(let i=0;i<m;i++){const o=P.restO[i],n=P.restN[i];
+   h+='<div>'+(o?'<span class="k">'+esc(oldLab(o))+'</span>'+esc(fullT(o)):'')+'</div><div>'+(n?'<span class="k">'+n.k+'</span>'+esc(fullT(n)):'')+'</div>';}
+ }
+ return h;
+}
+function renderCmp(){
+ $('dy-band').innerHTML=BANDS.map(b=>'<button data-b="'+b[0]+'" aria-pressed="'+(S.band===b[0])+'">'+b[1]+'</button>').join('');
+ let g='';
+ $('dy-nav').innerHTML=AREAS.map(a=>{let h='';if(a.g!==g){g=a.g;if(g)h+='<h2>'+g+'</h2>';}
+  return h+'<button data-a="'+a.id+'" aria-pressed="'+(S.area===a.id)+'">'+a.n+'</button>';}).join('');
+ const A=AREAS.find(a=>a.id===S.area),O=D.old.bands[S.band],N=D.bands[S.band];
+ $('dy-ttl').innerHTML='<b>'+(A.g?A.g+'　':'')+A.n+'</b><span>'+BNAME[S.band]+'　前回 平成20年告示 → いま 平成29年告示</span>';
+ let h='<div class="dy-cmpg"><div class="dy-colh2">前回（平成20年告示）</div><div class="dy-colh2">いま（平成29年告示）</div>';
+ const note=(CMPNOTE[S.area]?CMPNOTE[S.area]+' ':'')+(S.area!=='goal'&&S.area!=='知2'?'文がはっきり近い項目どうしを横に並べ、消えた字に線、入った字に下線を付けました（機械で文の近さを見たもの。対応は解説で確かめてください）。':'');
+ if(note)h+='<div class="dy-note">'+esc(note)+'</div>';
+ if(S.area==='goal'){
+  const n=Math.max(O.mokuhyo.length,N.mokuhyo.length);
+  for(let i=0;i<n;i++)h+='<div>'+(O.mokuhyo[i]?'<span class="k">('+(i+1)+')</span>'+esc(O.mokuhyo[i].t):'')+'</div><div>'+(N.mokuhyo[i]?'<span class="k">('+(i+1)+')</span>'+esc(N.mokuhyo[i].t):'')+'</div>';
+ }else{
+  [['jiko','指導事項'],['act','言語活動の例']].forEach(([kind,name])=>{
+   const news=N.items.filter(x=>x.area===S.area&&x.kind===kind),olds=O.items.filter(x=>x.kind===kind&&OLDOF[S.area](x));
+   if(!news.length&&!olds.length)return;
+   if(S.area.length===1)h+='<div class="dy-sub">'+name+'</div>';
+   h+=cmpRows(pairUp(news,olds));
+  });
+ }
+ $('dy-list').innerHTML=h+'</div>';
+}
+
+/* ---------- 歩み ---------- */
+function renderHist(){
+ $('dy-band').innerHTML='';
+ if(!E.hist){$('dy-ttl').innerHTML='<b>国語の 歩み</b>';$('dy-list').innerHTML='<div class="dy-none">準備中です</div>';return;}
+ $('dy-ttl').innerHTML='<b>国語の 歩み</b><span>'+(S.hist==='fig'?'帯が切れた所で 名前や形が変わった':S.hist==='text'?'告示した年 → 小学校で始まった年':esc(E.next.asof)+' に たしかめた内容')+'</span><span class="dy-sp2"></span><div class="dy-seg" role="group" aria-label="見かた"><button data-h="fig" aria-pressed="'+(S.hist==='fig')+'">図で見る</button><button data-h="text" aria-pressed="'+(S.hist==='text')+'">文で見る</button><button data-h="next" aria-pressed="'+(S.hist==='next')+'">次の改訂</button></div>';
+ if(S.hist==='fig'){$('dy-list').innerHTML=figHTML();return;}
+ if(S.hist==='next'){const N=E.next;
+  $('dy-list').innerHTML='<div class="dy-lead">'+esc(N.status)+'</div><div class="dy-steps">'+N.steps.map(s=>'<span'+(s.now?' class="now"':'')+'>'+esc(s.d)+'　'+esc(s.t)+(s.now?'（いまここ）':'')+'</span>').join('')+'</div>'
+   +N.items.map(x=>'<div class="dy-nx"><span class="dy-flag">'+esc(x.kind)+'</span>'+esc(x.t)+'<div class="d">'+esc(x.date||'')+'　'+(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.src)+'</a>':esc(x.src||''))+'</div></div>').join('');return;}
+ $('dy-list').innerHTML=E.hist.map((y,i)=>'<div class="dy-y'+(y.year==='2017'?' now':'')+(S.hy===i?' hl':'')+'" id="dy-y'+i+'"><div class="yy">'+esc(y.year)+'<small>'+esc(y.when)+'</small></div>'
+  +'<div><h3>'+esc(y.name)+'</h3><div class="dy-chips2">'+(y.parts||[]).map(p=>'<span>'+esc(p)+'</span>').join('')+'</div><ul>'+(y.points||[]).map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>'
+  +(y.url?'<a href="'+esc(y.url)+'" target="_blank" rel="noopener">出典：'+esc(y.src)+'</a>':'')+'</div></div>').join('');
+ if(S.hy>=0){const el=$('dy-y'+S.hy);if(el)el.scrollIntoView({block:'start'});}
+}
+function figHTML(){
+ const F=E.histfig,C=F.cols,col=y=>C.indexOf(y)+2;
+ let h='<div class="dy-fig"><div class="dy-fg" style="--dy-n:'+C.length+'"><div></div>'+C.map(y=>{const H=E.hist.find(x=>x.year===y);return '<div class="yh'+(y==='2017'?' now':'')+(y==='次'?' next':'')+'">'+esc(y)+'<small>'+(y==='2017'?'いま':y==='次'?'審議中':esc((H&&H.when||'').split('年')[0]))+'</small></div>';}).join('');
+ F.lanes.forEach((L,r)=>{
+  h+='<div class="ln" style="grid-row:'+(r+2)+'">'+esc(L.n)+'</div>';
+  L.seg.forEach(([a,b,t])=>{const i=E.hist.findIndex(x=>x.year===a);
+   h+='<button class="sg'+(a==='次'?' nx':'')+(t?'':' em')+(r===0?' nm':'')+'" data-y="'+i+'" style="grid-row:'+(r+2)+';grid-column:'+col(a)+'/'+(col(b)+1)+'" title="'+esc(a+(a!==b?'〜'+b:'')+'　'+t)+'">'+(t?esc(t):'<span aria-label="なし">―</span>')+'</button>';});
+ });
+ return h+'</div><div class="dy-fgk"><span><i></i>そのころの形（横に長い帯＝しばらく変わらなかった）</span><span><i class="nx"></i>次の改訂の案（まだ決まっていない）</span><span>帯を押すと、その年の説明へ</span></div></div>';
+}
+
+/* ---------- 1年の地図 ---------- */
+function renderMap(){
+ $('dy-band').innerHTML=GRADES.map(g=>'<button data-g="'+g+'" aria-pressed="'+(S.grade===g)+'">'+g+'年</button>').join('');
+ const T=TERMS.find(x=>x[0]===S.term),ms=T[2];
+ $('dy-ttl').innerHTML='<div class="dy-mapbar"><div class="dy-seg" id="dy-term" role="group" aria-label="月">'+TERMS.map(x=>'<button data-t="'+x[0]+'" aria-pressed="'+(S.term===x[0])+'">'+x[1]+'</button>').join('')+'</div>'
+  +'<span class="dy-legend"><span class="dy-tag C on">読◎</span>重点　<span class="dy-tag C">読</span>そのほか</span></div>';
+ const us=U.grades[S.grade].map((u,i)=>({u,i,m:monthOf(u.m)}));
+ // 月ごとに「見出し＋単元」の順で書く（PC はよこに並べ、スマホはたてに積む）
+ let h='<div class="dy-map" style="--dy-n:'+ms.length+'">';
+ ms.forEach(m=>{
+  const cs=us.filter(x=>x.m===m);
+  h+='<div class="dy-mh">'+m+'月</div><div class="dy-cell">'+(cs.length?cs.map(x=>{const hit=S.q&&(x.u.unit+x.u.title.join('')).includes(S.q);
+   return '<button class="dy-chip" data-mu="'+x.i+'"'+(S.q&&!hit?' style="opacity:.35"':'')+'>'+tagsHTML(x.u)+'<span class="n">'+esc(uname(x.u))+'<span class="h">'+x.u.h+'時間</span></span></button>';}).join(''):'<span class="dy-empty2">―</span>')+'</div>';
+ });
+ $('dy-list').innerHTML=h+'</div>';
+}
+
+function render(){
+ $('dy-mode').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===S.mode));
+ $('dy-kei').hidden=S.mode!=='yoryo';
+ $('dy-band').setAttribute('aria-label',S.mode==='yoryo'?'学年のまとまり':'学年');
+ $('dy-side').hidden=S.mode==='map'||S.mode==='hist';
+ $('dy-src').textContent=S.mode==='hist'?'出典：'+(E.src_extra||''):SRC;
+ document.querySelector('.dy-find').hidden=S.mode==='cmp';
+ $('dy-band').hidden=S.mode==='hist';
+ if(S.mode==='map')renderMap();
+ else if(S.mode==='cmp')renderCmp();
+ else if(S.mode==='hist')renderHist();
+ else if(S.mode==='unit'){renderUnit();const on=$('dy-nav').querySelector('[aria-pressed=true]');if(on)on.scrollIntoView({block:'nearest'});}else renderYoryo();
+ renderPick();
+}
+function unitText(){
+ const u=U.grades[S.grade][S.ui];
+ return S.grade+'年「'+u.title.join('・')+'」'+(u.unit?'（'+u.unit+'）':'');
+}
+function renderPick(){
+ if(S.mode==='map'||S.mode==='cmp'||S.mode==='hist'){
+  $('dy-picked').textContent=S.mode==='map'?'単元を押すと、その単元で目指すことが出ます':S.mode==='cmp'?'消えた字に線、入った字に下線と黄色':'出典は、それぞれの年の説明の下にあります';
+  $('dy-clear').hidden=true;$('dy-copy').disabled=true;$('dy-send').disabled=true;return;
+ }
+ if(S.mode==='unit'){
+  $('dy-picked').textContent=unitText();
+  $('dy-clear').hidden=true;$('dy-copy').disabled=false;$('dy-send').disabled=false;return;
+ }
+ $('dy-clear').hidden=false;
+ const n=S.pick.length;
+ $('dy-picked').textContent=n?S.pick.map(c=>{const x=ALL[c];return BNAME[x.band]+' '+label(x);}).join('、'):'項目を押すと選べます';
+ ['dy-clear','dy-copy','dy-send'].forEach(id=>$(id).disabled=!n);
+}
+function toast(t){const e=$('dy-toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2200);}
+const one=x=>({code:x.c,band:x.band,label:label(x),text:x.t+(x.subs?x.subs.map(s=>'（'+s.k+'）'+s.t).join(''):'')});
+function picked(){return S.pick.map(c=>one(ALL[c]));}
+function unitAims(){const u=U.grades[S.grade][S.ui];const r=[];u.aim.forEach(a=>a.c.forEach(c=>r.push(Object.assign({main:a.main},one(ALL[c])))));return r;}
+function copyText(t){
+ if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
+ const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();return Promise.resolve();
+}
+
+$('dy-mode').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;S.mode=b.dataset.m;S.hit='';save();render();$('dy-list').scrollTop=0;});
+$('dy-band').addEventListener('click',e=>{const b=e.target.closest('[data-b],[data-g]');if(!b)return;
+ if(b.dataset.g){S.grade=b.dataset.g;S.ui=0;S.band=bandOf(+S.grade);}else S.band=b.dataset.b;save();render();$('dy-nav').scrollTop=0;});
+$('dy-nav').addEventListener('click',e=>{
+ const u=e.target.closest('[data-u]');if(u){S.ui=+u.dataset.u;save();render();$('dy-list').scrollTop=0;return;}
+ const b=e.target.closest('[data-a]');if(!b)return;S.area=b.dataset.a;S.q='';$('dy-q').value='';$('dy-qx').hidden=true;save();render();$('dy-list').scrollTop=0;});
+$('dy-kei').addEventListener('click',()=>{S.kei=!S.kei;render();});
+$('dy-ttl').addEventListener('click',e=>{const tb=e.target.closest('[data-t]');if(tb){S.term=tb.dataset.t;render();return;}
+ const kr=e.target.closest('[data-kr]');if(kr){S.keiR=kr.dataset.kr;render();return;}
+ const hb=e.target.closest('[data-h]');if(hb){S.hist=hb.dataset.h;S.hy=-1;render();$('dy-list').scrollTop=0;}});
+$('dy-list').addEventListener('click',e=>{
+ const yb=e.target.closest('[data-y]');if(yb){S.hist='text';S.hy=+yb.dataset.y;render();return;}
+ const mu=e.target.closest('[data-mu]');if(mu){S.mode='unit';S.ui=+mu.dataset.mu;save();render();$('dy-list').scrollTop=0;return;}
+ const g=e.target.closest('[data-go]');if(g){openCode(g.dataset.go);return;}
+ const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c;const i=S.pick.indexOf(c);if(i<0)S.pick.push(c);else S.pick.splice(i,1);b.setAttribute('aria-pressed',i<0);renderPick();});
+$('dy-q').addEventListener('input',e=>{S.q=e.target.value.trim();$('dy-qx').hidden=!S.q;render();});
+$('dy-qx').addEventListener('click',()=>{S.q='';$('dy-q').value='';$('dy-qx').hidden=true;render();$('dy-q').focus();});
+$('dy-clear').addEventListener('click',()=>{S.pick=[];render();});
+$('dy-copy').addEventListener('click',()=>{
+ const t=S.mode==='unit'?unitText()+'\n'+unitAims().map(p=>(p.main?'◎':'○')+p.label+'　'+p.text).join('\n'):picked().map(p=>p.label+'　'+p.text).join('\n');
+ copyText(t).then(()=>toast('写しました。指導案に はりつけられます'));});
+// 授業メイトへ：学校の Google（GAS）の授業メイトの中で開いたときだけ親に渡す。見本では渡す中身を写す。
+const inMate=window.parent!==window&&/script\.google|googleusercontent/.test(document.referrer||'');
+$('dy-send').addEventListener('click',()=>{
+ const msg=S.mode==='unit'?{type:'yoryo-unit',src:D.src,grade:+S.grade,unit:U.grades[S.grade][S.ui].unit,title:U.grades[S.grade][S.ui].title,items:unitAims()}:{type:'yoryo-pick',src:D.src,items:picked()};
+ if(inMate){window.parent.postMessage(msg,'*');toast('授業メイトへ送りました');}
+ else copyText(JSON.stringify(msg)).then(()=>toast('見本なので、送る中身を写しました'));
+});
+// コードを付けて開くと、その項目を出す（#82102D3231400000）
+function openCode(c){
+ const x=ALL[c];if(!x)return false;
+ const chu=x.band[0]==='中';S.mode='yoryo';S.band=chu?'56':x.band;S.area=x.area;S.kei=chu;S.keiR=chu?'chu':S.keiR;S.q='';$('dy-q').value='';$('dy-qx').hidden=true;S.hit=c;save();render();
+ const el=document.querySelector('[data-c="'+c+'"]');if(el)el.scrollIntoView({block:'center'});
+ return true;
+}
+const fromHash=()=>openCode(decodeURIComponent(location.hash.slice(1)));
+window.addEventListener('hashchange',fromHash);
+// 授業メイトの中に入れたとき：{type:'yoryo-open',code:'82102D3231400000'} で開く
+window.addEventListener('message',e=>{if(e.data&&e.data.type==='yoryo-open')openCode(e.data.code);});
+const SRC='出典：文部科学省「学習指導要領コード」（小学校 平成29年・平成20年告示、中学校 平成29年告示）'+(HAS_U?'／光村図書「年間指導計画例（令和6年度版）」':'');
+$('dy-src').textContent=SRC;
+render();fromHash();
+// ほかの画面からも使える：コードで引く
+window.DY_YORYO={open:openCode,get:c=>ALL[c]?{code:c,band:ALL[c].band,label:label(ALL[c]),text:ALL[c].t}:null};
+})();
+</script>
+</body></html>
