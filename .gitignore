@@ -1,0 +1,17 @@
+# あげるのは公開ページ（docs/）と特活の作り方だけ。国語は別の会話が作っているので、あげるときに足す。
+# 教科書会社の資料（data/光村/ など）は あげない。
+*
+!.gitignore
+!README.md
+!docs/
+!docs/**
+!tools/
+!tools/build_tokkatsu.py
+!mock/
+!mock/template_tokkatsu.html
+!data/
+!data/tokkatsu.json
+!data/tokkatsu_h20.json
+!data/tokkatsu_extra.json
+!data/国のコード表_小学校_82V12.csv
+.DS_Store

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
+<title>学習指導要領 特別活動</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* 学習指導要領（特別活動）を引く画面。データは下の tk-data 1か所（tools/build_tokkatsu.py が入れる）。
+   つなぎは国語と同じ：#82N1203110000000 のようにコードを付けて開く／postMessage {type:'yoryo-open',code}／選んだ項目は {type:'yoryo-pick',...} で渡す。 */
+:root{color-scheme:light;--tk-ink:#22252a;--tk-sub:#4a5260;--tk-line:#d6dbe2;--tk-soft:#f5f7fa;--tk-blue:#1a4fa0;--tk-blue2:#e8eef8;--tk-new:#8a4b00;--tk-new2:#fff3df;--tk-ins:#fff0a8;
+ --tk-g:"BIZ UDPGothic","BIZ UDPゴシック","BIZ UDGothic","BIZ UDゴシック","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif}
+html,body{height:100%;margin:0}body{background:#fff;color:var(--tk-ink);font-family:var(--tk-g);font-size:16px;letter-spacing:.03em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+*{box-sizing:border-box}[hidden]{display:none!important}
+button,input{font:inherit;color:var(--tk-ink);letter-spacing:inherit}input{background:#fff}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--tk-blue);outline-offset:2px}
+#tk-app{height:100%;display:flex;flex-direction:column;gap:6px;padding:8px 14px;max-width:1400px;margin:0 auto}
+#tk-app button{min-height:44px;min-width:44px;border:1px solid #9aa3ad;border-radius:8px;background:#fff;padding:6px 12px;cursor:pointer;white-space:nowrap}
+#tk-app button[aria-pressed=true]{background:var(--tk-blue2);border-color:var(--tk-blue);color:var(--tk-blue);font-weight:700}
+#tk-app button.tk-main{background:var(--tk-blue);border-color:var(--tk-blue);color:#fff;font-weight:700}
+#tk-app button:disabled{opacity:.45;cursor:default}
+/* 上：名前・見かた・さがす */
+.tk-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tk-head h1{margin:0 6px 0 0;font-size:20px;font-weight:700;white-space:nowrap}
+.tk-seg{display:flex;border:1px solid #9aa3ad;border-radius:8px;overflow:hidden}
+#tk-app .tk-seg button{border:0;border-radius:0;border-right:1px solid var(--tk-line)}#tk-app .tk-seg button:last-child{border-right:0}
+.tk-sp{flex:1}
+.tk-find{display:flex;align-items:center;gap:4px;border:1px solid #9aa3ad;border-radius:8px;padding:0 4px 0 10px;min-height:44px;width:min(210px,100%)}
+.tk-find input{border:0;outline:0;flex:1;min-width:0;min-height:40px;font-size:16px}
+#tk-app .tk-find button{border:0;min-width:40px;padding:0;color:var(--tk-sub)}
+.tk-ic{width:20px;height:20px;flex:none;vertical-align:-4px}
+/* 中：左に一覧、右に中身 */
+.tk-body{flex:1;min-height:0;display:flex;gap:10px}
+.tk-nav{flex:0 0 200px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.tk-nav h2{margin:8px 0 0;font-size:14px;color:var(--tk-sub);font-weight:700;border-bottom:1px solid var(--tk-line);padding-bottom:2px}.tk-nav h2:first-child{margin-top:0}
+#tk-app .tk-nav button{flex:none;text-align:left;border:1px solid var(--tk-line);background:#fff;white-space:normal;line-height:1.35;padding:7px 10px}
+#tk-app .tk-nav button:hover{background:var(--tk-soft);border-color:#9aa3ad}
+#tk-app .tk-nav button[aria-pressed=true]{border:2px solid var(--tk-blue);padding:6px 9px;background:var(--tk-blue2)}
+.tk-nav{gap:5px!important;padding:2px 4px 2px 0}
+.tk-nav small{display:block;font-size:14px;color:var(--tk-sub);font-weight:400}
+.tk-pane{flex:1;min-width:0;display:flex;flex-direction:column;border:1px solid var(--tk-line);border-radius:8px;overflow:hidden}
+.tk-ttl{display:flex;align-items:center;gap:10px;padding:2px 4px 2px 12px;min-height:44px;border-bottom:1px solid var(--tk-line);background:var(--tk-soft);flex-wrap:wrap}
+.tk-ttl b{font-size:17px}.tk-ttl span{font-size:14px;color:var(--tk-sub)}
+#tk-app .tk-ttl button{padding:2px 10px;font-size:15px}
+.tk-list{flex:1;min-height:0;overflow:auto;line-height:1.75}
+/* 本文の1項目 */
+.tk-r{display:grid;grid-template-columns:1fr 44px;gap:6px;border-bottom:1px solid var(--tk-line);padding:6px 4px 6px 12px}
+.tk-r>div{max-width:46em}.tk-nx,.tk-lead{max-width:none}.tk-nx>*:not(.d),.tk-y ul{max-width:46em}
+.tk-r.l0{background:var(--tk-soft)}.tk-r.l2{padding-left:30px}
+.tk-r.hit{outline:3px solid #b8860b;outline-offset:-3px}
+.tk-r.on{background:var(--tk-blue2)}
+.tk-n{font-weight:700;color:var(--tk-blue);margin-right:.5em}
+.tk-h{font-weight:700}
+.tk-t{display:block}
+#tk-app .tk-ck{align-self:start;border:0;padding:0;background:none}
+.tk-ck i{display:flex;width:24px;height:24px;margin:auto;border:2px solid #9aa3ad;border-radius:4px;align-items:center;justify-content:center}
+.tk-r.on .tk-ck i{background:var(--tk-blue);border-color:var(--tk-blue)}
+.tk-r.on .tk-ck i::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg);margin-top:-3px}
+/* しるし：新しく入った・変わった（字で伝える） */
+.tk-tag{display:inline-block;font-size:14px;line-height:1.4;font-weight:700;border:1px solid currentColor;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.tk-tag.new{color:var(--tk-new);background:var(--tk-new2)}
+.tk-tag.chg,.tk-tag.move{color:var(--tk-blue);background:#fff}
+.tk-tag.same{color:var(--tk-sub);background:#fff}
+.tk-tag.gone{color:#6b3a8a;background:#fff}
+.tk-tag.kettei{color:#155f2e;background:#e9f6ed}.tk-tag.shingi{color:var(--tk-new);background:var(--tk-new2)}.tk-tag.yotei{color:var(--tk-blue);background:var(--tk-blue2)}
+#tk-app a.tk-cmp{font-size:14px;color:var(--tk-blue);margin-left:6px;white-space:nowrap}
+/* 用語：本文の中で点線の下線。押すと下に意味 */
+a.tk-w{color:inherit;text-decoration:underline dotted var(--tk-blue) 2px;text-underline-offset:4px;cursor:help}
+.tk-card{border-top:2px solid var(--tk-blue);background:#fff;padding:8px 12px;max-height:40%;overflow:auto;line-height:1.7}
+.tk-card b{font-size:17px}.tk-card .y{font-size:14px;color:var(--tk-sub);margin-left:8px}
+.tk-card p{margin:4px 0}
+.tk-ent{max-height:none;border-top:0;border-bottom:1px solid var(--tk-line);padding:10px 12px}.tk-ent.on{background:var(--tk-blue2)}.tk-ent p{max-width:46em}
+#tk-app .tk-card .x{float:right;border:0;font-size:20px;color:var(--tk-sub)}
+/* くらべる：左に前回、右にいま */
+.tk-cmpg{display:grid;grid-template-columns:1fr 1fr}
+.tk-cmpg>div{min-width:0;padding:6px 12px;border-bottom:1px solid var(--tk-line)}
+.tk-cmpg>div:nth-child(odd){border-right:1px solid var(--tk-line)}
+.tk-colh{position:sticky;top:0;z-index:1;background:#fff;font-weight:700}
+.tk-note{grid-column:1/-1;background:var(--tk-soft);font-size:15px;line-height:1.6}
+.tk-cmpg .tk-x{color:var(--tk-sub);font-size:14px}
+del{text-decoration:line-through 2px;color:#6a707a}
+ins{text-decoration:underline 2px;text-underline-offset:3px;background:var(--tk-ins)}
+/* 歩み */
+.tk-y{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:10px 12px;border-bottom:1px solid var(--tk-line)}
+.tk-y.now{background:var(--tk-blue2)}.tk-y.next{background:var(--tk-new2)}
+.tk-y .yy{font-size:22px;font-weight:700;line-height:1.2}.tk-y .yy small{display:block;font-size:14px;font-weight:400;color:var(--tk-sub)}
+.tk-y h3{margin:0;font-size:17px}
+.tk-y ul{margin:4px 0 0;padding-left:1.2em}
+.tk-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.tk-chips span{max-width:100%;overflow-wrap:anywhere;font-size:14px;border:1px solid var(--tk-line);border-radius:4px;padding:0 6px;background:#fff}
+/* 歩みの図：年を横、活動を縦の帯に。帯が切れた所が変わった所 */
+.tk-fig{padding:10px 12px;overflow-x:auto}
+.tk-fg{display:grid;grid-template-columns:64px repeat(10,minmax(62px,1fr));gap:6px 3px;min-width:720px;align-items:stretch}
+.tk-fg .yh{font-weight:700;text-align:center;font-size:15px;line-height:1.3;padding-bottom:2px;border-bottom:2px solid var(--tk-line)}
+.tk-fg .yh small{display:block;font-size:14px;font-weight:400;color:var(--tk-sub)}
+.tk-fg .yh.now{color:var(--tk-blue);border-color:var(--tk-blue)}.tk-fg .yh.next{color:var(--tk-new);border-color:var(--tk-new)}
+.tk-fg .ln{font-weight:700;font-size:15px;display:flex;align-items:center}
+#tk-app .tk-fg .sg{min-height:52px;white-space:normal;line-height:1.35;font-size:14px;padding:4px 6px;border-radius:6px;border:1px solid #8fa6c8;background:var(--tk-blue2);color:var(--tk-ink);text-align:center}
+#tk-app .tk-fg .sg.nx{border:2px dashed var(--tk-new);background:#fff}
+#tk-app .tk-fg .sg.em{border:1px dashed var(--tk-line);background:#fff;color:var(--tk-sub)}
+#tk-app .tk-fg .sg.nm{background:#fff;border-color:var(--tk-ink);font-weight:700}
+.tk-fgk{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--tk-sub);margin-top:10px}
+.tk-fgk i{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px;border:1px solid #8fa6c8;background:var(--tk-blue2)}
+.tk-fgk i.nx{border:2px dashed var(--tk-new);background:#fff}
+/* 次の改訂 */
+.tk-nx{padding:8px 12px;border-bottom:1px solid var(--tk-line)}
+.tk-nx .d{font-size:14px;color:var(--tk-sub)}
+.tk-nx a{color:var(--tk-blue);font-size:14px}
+.tk-lead{padding:10px 12px;border-bottom:1px solid var(--tk-line);background:var(--tk-soft)}
+/* さがす */
+.tk-grp{padding:6px 12px 2px;font-size:14px;color:var(--tk-sub);font-weight:700;background:#fff;position:sticky;top:0}
+#tk-app .tk-res{display:block;width:100%;text-align:left;white-space:normal;border:0;border-bottom:1px solid var(--tk-line);border-radius:0;padding:6px 12px;line-height:1.6}
+#tk-app .tk-res:hover{background:var(--tk-soft)}
+.tk-res .w{display:block;font-size:14px;color:var(--tk-sub)}
+mark{background:var(--tk-ins);color:inherit}
+.tk-none{padding:16px;color:var(--tk-sub)}
+/* 下：選んだもの */
+.tk-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:48px}
+.tk-picked{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--tk-sub);font-size:14px}
+.tk-src{font-size:14px;color:var(--tk-sub);line-height:1.4}
+.tk-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:var(--tk-ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:15px}
+@media (max-width:760px){
+ #tk-app{padding:8px 16px}.tk-body{flex-direction:column}
+ .tk-nav{flex:none;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:2px}.tk-nav h2{display:none}
+ #tk-app .tk-nav button{flex:none;white-space:nowrap;border-color:var(--tk-line)}.tk-nav small{display:none}
+ .tk-seg{overflow-x:auto;max-width:100%}#tk-app .tk-seg button{flex:none}.tk-find{width:100%}
+ .tk-cmpg{grid-template-columns:1fr}.tk-cmpg>div:nth-child(odd){border-right:0}
+ .tk-y{grid-template-columns:1fr}
+}
+</style></head><body>
+<div id="tk-app">
+ <div class="tk-head">
+  <h1>学習指導要領　特別活動</h1>
+  <div class="tk-seg" id="tk-mode" role="group" aria-label="見かた">
+   <button data-m="now">いまの本文</button><button data-m="cmp">前回とくらべる</button><button data-m="hist">歩み</button><button data-m="next">次の改訂</button><button data-m="term">用語</button>
+  </div>
+  <span class="tk-sp"></span>
+  <label class="tk-find"><svg class="tk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="tk-q" type="search" placeholder="ことばで さがす" aria-label="ことばで さがす"><button id="tk-qx" hidden aria-label="けす">×</button></label>
+ </div>
+ <div class="tk-body">
+  <nav class="tk-nav" id="tk-nav" aria-label="えらぶ"></nav>
+  <section class="tk-pane"><div class="tk-ttl" id="tk-ttl"></div><div class="tk-list" id="tk-list"></div><div class="tk-card" id="tk-card" hidden role="region" aria-live="polite"></div></section>
+ </div>
+ <div class="tk-foot" id="tk-foot">
+  <span class="tk-picked" id="tk-picked"></span>
+  <button id="tk-clear" disabled>はずす</button>
+  <button id="tk-copy" disabled><svg class="tk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg> 写す</button>
+  <button id="tk-send" class="tk-main" disabled>授業メイトへ</button>
+ </div>
+ <div class="tk-src" id="tk-src"></div>
+</div>
+<div class="tk-toast" id="tk-toast" hidden role="status"></div>
+<script type="application/json" id="tk-data">__DATA__</script>
+<script>
+(function(){
+const D=JSON.parse(document.getElementById('tk-data').textContent);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const SEC={};D.secs.forEach(s=>SEC[s.id]=s.n);
+const NOW={},OLD={};
+D.secs.forEach(s=>{D.now[s.id].forEach(r=>{r.sec=s.id;NOW[r.id]=r;});D.old[s.id].forEach(r=>{r.sec=s.id;OLD[r.id]=r;});});
+// いまの項目 → くらべの対応
+const PAIR={};D.pairs.forEach((p,i)=>{p.i=i;(p.now||[]).forEach(c=>PAIR[c]=p);});
+const KIND={new:'新しく入った',chg:'書きかえ',move:'場所が移った',same:'ほぼ同じ',gone:'前回だけ'};
+const NK={'決定':'kettei','審議中の案':'shingi','予定':'yotei'};
+const S={fig:true,mode:'now',sec:'gakkyu',year:'',term:0,q:'',pick:[],hit:'',mark:true,onlyChg:false,card:-1};
+try{const o=JSON.parse(localStorage.getItem('tk-state')||'{}');['mode','sec','term','mark','onlyChg','fig'].forEach(k=>{if(o[k]!=null)S[k]=o[k];});}catch(e){}
+function save(){try{localStorage.setItem('tk-state',JSON.stringify({mode:S.mode,sec:S.sec,term:S.term,mark:S.mark,onlyChg:S.onlyChg,fig:S.fig}));}catch(e){}}
+
+/* 用語の下線：長い語から先に当てる。1項目の中で同じ語は最初の1回だけ */
+const TW=[];D.terms.forEach((t,i)=>(t.m||[t.w]).forEach(w=>TW.push([w,i])));TW.sort((a,b)=>b[0].length-a[0].length);
+const TRE=new RegExp('('+TW.map(x=>reEsc(x[0])).join('|')+')','g');
+function deco(t,words){
+ // 用語の下線と さがす語の印を、エスケープした字に付ける
+ let h=esc(t);
+ if(words){const seen={};h=h.replace(TRE,w=>{const i=TW.find(x=>x[0]===w)[1];if(seen[i])return w;seen[i]=1;return '<a href="#" class="tk-w" data-t="'+i+'">'+w+'</a>';});}
+ if(S.q){const q=reEsc(esc(S.q));h=h.replace(new RegExp('(^|>)([^<]*)','g'),(m,a,b)=>a+b.replace(new RegExp(q,'g'),'<mark>$&</mark>'));}
+ return h;
+}
+const label=r=>SEC[r.sec]+(r.n&&r.n!==SEC[r.sec]?' '+r.n:'')+(r.h?' '+r.h:'');
+/* 文字のちがい（LCS）：短すぎる「同じ」は前後にまとめて、印を読みやすくする */
+function diff(a,b){
+ const n=a.length,m=b.length,L=Array.from({length:n+1},()=>new Uint16Array(m+1));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+ let ops=[],i=0,j=0;const push=(k,c)=>{const l=ops[ops.length-1];if(l&&l[0]===k)l[1]+=c;else ops.push([k,c]);};
+ while(i<n&&j<m){if(a[i]===b[j]){push('=',a[i]);i++;j++;}else if(L[i+1][j]>=L[i][j+1]){push('-',a[i]);i++;}else{push('+',b[j]);j++;}}
+ while(i<n)push('-',a[i++]);while(j<m)push('+',b[j++]);
+ for(let k=1;k<ops.length-1;k++)if(ops[k][0]==='='&&ops[k][1].length<3){ops.splice(k,1,['-',ops[k][1]],['+',ops[k][1]]);}
+ const A=[],B=[];ops.forEach(([k,c])=>{if(k!=='+')A.push([k,c]);if(k!=='-')B.push([k,c]);});
+ const join=(x,tag)=>{let o=[];x.forEach(([k,c])=>{const l=o[o.length-1];if(l&&l[0]===k)l[1]+=c;else o.push([k,c]);});return o.map(([k,c])=>k==='='?esc(c):'<'+tag+'>'+esc(c)+'</'+tag+'>').join('');};
+ return [join(A,'del'),join(B,'ins')];
+}
+const full=r=>(r.h?r.h+'\n':'')+r.t;
+
+/* ---------- いまの本文 ---------- */
+function rowHTML(r){
+ const p=PAIR[r.id],on=S.pick.includes(r.id);
+ const tag=p&&p.kind!=='same'?'<span class="tk-tag '+p.kind+'">'+(p.kind==='new'?'新':KIND[p.kind])+'</span>':'';
+ const cmp=p?'<a href="#" class="tk-cmp" data-p="'+p.i+'">前回は →</a>':'';
+ const head=(r.n?'<span class="tk-n">'+esc(r.n)+'</span>':'')+(r.h?'<span class="tk-h">'+deco(r.h,1)+'</span>':'');
+ return '<div class="tk-r l'+r.lv+(on?' on':'')+(S.hit===r.id?' hit':'')+'" id="r'+r.id+'"><div>'+head+tag+cmp+(r.t?'<span class="tk-t">'+deco(r.t,1)+'</span>':'')+'</div>'
+  +(r.t||(r.h&&r.lv)?'<button class="tk-ck" data-c="'+r.id+'" aria-pressed="'+on+'" aria-label="選ぶ"><i></i></button>':'<span></span>')+'</div>';
+}
+function navSecs(){
+ $('tk-nav').innerHTML=D.secs.map(s=>'<button data-s="'+s.id+'" aria-pressed="'+(!S.q&&S.sec===s.id)+'">'+s.n+'</button>').join('');
+}
+function renderNow(){
+ navSecs();
+ $('tk-ttl').innerHTML='<b>'+SEC[S.sec]+'</b><span>平成29年告示（令和2年度から）</span>';
+ $('tk-list').innerHTML=D.now[S.sec].map(rowHTML).join('');
+}
+/* ---------- 前回とくらべる ---------- */
+function renderCmp(){
+ navSecs();
+ $('tk-ttl').innerHTML='<b>'+SEC[S.sec]+'</b><span>前回 平成20年 → いま 平成29年</span><span class="tk-sp"></span>'
+  +'<button id="tk-mark" aria-pressed="'+S.mark+'">ちがいに印</button><button id="tk-only" aria-pressed="'+S.onlyChg+'">変わった所だけ</button>';
+ const ps=D.pairs.filter(p=>p.sec===S.sec&&!(S.onlyChg&&p.kind==='same'));
+ let h='<div class="tk-cmpg"><div class="tk-colh">前回（平成20年告示）</div><div class="tk-colh">いま（平成29年告示）</div>';
+ ps.forEach(p=>{
+  const o=(p.old||[]).map(i=>OLD[i]),n=(p.now||[]).map(i=>NOW[i]);
+  let L,R;
+  if(S.mark&&!p.nodiff&&p.kind!=='new'&&p.kind!=='gone'&&o.length===1&&n.length===1){const d=diff(full(o[0]),full(n[0]));L=d[0].replace(/\n/g,'<br>');R=d[1].replace(/\n/g,'<br>');
+   L=(o[0].n?'<span class="tk-n">'+esc(o[0].n)+'</span>':'')+L;R=(n[0].n?'<span class="tk-n">'+esc(n[0].n)+'</span>':'')+R;}
+  else{const f=rs=>rs.map(r=>(r.n?'<span class="tk-n">'+esc(r.n)+'</span>':'')+(r.h?'<span class="tk-h">'+esc(r.h)+'</span><br>':'')+esc(r.t)).join('<br>');
+   L=o.length?f(o):'<span class="tk-x">（前回は なし）</span>';R=n.length?f(n):'<span class="tk-x">（いまは なし）</span>';}
+  h+='<div class="tk-note" id="p'+p.i+'"'+(S.hit==='p'+p.i?' style="outline:3px solid #b8860b;outline-offset:-3px"':'')+'><span class="tk-tag '+p.kind+'" style="margin:0 8px 0 0">'+KIND[p.kind]+'</span>'+deco(p.note||'',1)+'</div><div>'+L+'</div><div>'+R+'</div>';
+ });
+ $('tk-list').innerHTML=h+'</div>'+(ps.length?'':'<div class="tk-none">変わった所は ありません</div>');
+}
+/* ---------- 歩み ---------- */
+function renderHist(){
+ $('tk-nav').innerHTML=D.hist.map((y,i)=>'<button data-y="'+i+'"'+(y.now?' aria-current="true"':'')+'>'+esc(y.year)+'<small>'+esc(y.name)+'</small></button>').join('');
+ $('tk-ttl').innerHTML='<b>特別活動の 歩み</b><span>'+(S.fig?'帯が切れた所で 名前や形が変わった':'告示した年 → 小学校で始まった年')+'</span><span class="tk-sp"></span><div class="tk-seg"><button id="tk-fig1" aria-pressed="'+S.fig+'">図で見る</button><button id="tk-fig0" aria-pressed="'+!S.fig+'">文で見る</button></div>';
+ if(S.fig){$('tk-list').innerHTML=figHTML();return;}
+ $('tk-list').innerHTML=D.hist.map((y,i)=>'<div class="tk-y'+(y.now?' now':'')+(y.next?' next':'')+'" id="y'+i+'"><div class="yy">'+esc(y.year)+'<small>'+esc(y.when)+'</small>'+(y.now?'<span class="tk-tag chg" style="margin:4px 0 0">いま</span>':'')+(y.next?'<span class="tk-tag new" style="margin:4px 0 0">次</span>':'')+'</div>'
+  +'<div><h3>'+deco(y.name)+'</h3><div class="tk-chips">'+y.parts.map(p=>'<span>'+esc(p)+'</span>').join('')+'</div><ul>'+y.points.map(p=>'<li>'+deco(p,1)+'</li>').join('')+'</ul>'+(y.cmp?'<a href="#" class="tk-cmp" data-go="cmp" style="margin:0 12px 0 0">いまとくらべる →</a>':'')+(y.next?'<a href="#" class="tk-cmp" data-go="next" style="margin:0 12px 0 0">次の改訂 →</a>':'')+(y.url?'<a href="'+esc(y.url)+'" target="_blank" rel="noopener" class="tk-cmp" style="margin:0;color:var(--tk-sub)">出典：'+esc(y.src)+'</a>':'')+'</div></div>').join('');
+}
+function figHTML(){
+ const F=D.histfig,C=F.cols,col=y=>C.indexOf(y)+2;
+ let h='<div class="tk-fig"><div class="tk-fg"><div></div>'+C.map(y=>{const H=D.hist.find(x=>x.year===y);return '<div class="yh'+(H&&H.now?' now':'')+(H&&H.next?' next':'')+'">'+esc(y)+'<small>'+(H&&H.now?'いま':H&&H.next?'審議中':esc((H&&H.when||'').split('年')[0]))+'</small></div>';}).join('');
+ F.lanes.forEach((L,r)=>{
+  h+='<div class="ln" style="grid-row:'+(r+2)+'">'+esc(L.n)+'</div>';
+  L.seg.forEach(([a,b,t])=>{const i=D.hist.findIndex(x=>x.year===a);
+   h+='<button class="sg'+(a==='次'?' nx':'')+(t?'':' em')+(r===0?' nm':'')+'" data-y="'+i+'" style="grid-row:'+(r+2)+';grid-column:'+col(a)+'/'+(col(b)+1)+'" title="'+esc(a+(a!==b?'〜'+b:'')+'　'+t)+'">'+(t?esc(t):'<span aria-label="なし">―</span>')+'</button>';});
+ });
+ return h+'</div><div class="tk-fgk"><span><i></i>そのころの形（横に長い帯＝しばらく変わらなかった）</span><span><i class="nx"></i>次の改訂の案（まだ決まっていない）</span><span>帯を押すと、その年の説明へ</span></div></div>';
+}
+/* ---------- 次の改訂 ---------- */
+function renderNext(){
+ const N=D.next;
+ $('tk-nav').innerHTML=N.steps.map(s=>'<button disabled style="opacity:1;cursor:default;'+(s.now?'border-color:var(--tk-new);font-weight:700':'')+'">'+esc(s.d)+'<small>'+esc(s.t)+(s.now?'（いまここ）':'')+'</small></button>').join('');
+ $('tk-ttl').innerHTML='<b>次の 学習指導要領</b><span>'+esc(N.asof)+' に たしかめた内容</span>';
+ $('tk-list').innerHTML='<div class="tk-lead">'+deco(N.status,1)+'</div>'+N.items.map(x=>'<div class="tk-nx"><span class="tk-tag '+(NK[x.kind]||'shingi')+'" style="margin:0 8px 0 0">'+esc(x.kind)+'</span>'+deco(x.t,1)
+  +'<div class="d">'+esc(x.date||'')+'　'+(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.src)+'</a>':esc(x.src||''))+'</div></div>').join('');
+}
+/* ---------- 用語 ---------- */
+const ORDER=D.terms.map((t,i)=>i).sort((a,b)=>D.terms[a].yomi.localeCompare(D.terms[b].yomi,'ja'));
+function where(i){
+ const ws=D.terms[i].m||[D.terms[i].w],hit=r=>ws.some(w=>full(r).includes(w));
+ return Object.values(NOW).filter(hit);
+}
+function termHTML(i,big){
+ const t=D.terms[i],wh=where(i);
+ return '<b>'+esc(t.w)+'</b><span class="y">'+esc(t.yomi)+'</span>'+(t.tag?'<span class="tk-tag '+(t.tag==='前回まで'?'gone':'new')+'">'+esc(t.tag)+'</span>':'')
+  +'<p>'+deco(t.t)+'</p>'+(t.note?'<p style="font-size:14px;color:var(--tk-sub)">'+esc(t.note)+'</p>':'')
+  +(wh.length?'<p style="font-size:15px">いまの本文では：'+wh.slice(0,big?20:4).map(r=>'<a href="#" class="tk-cmp" style="margin:0 8px 0 0" data-go="'+r.id+'">'+esc(SEC[r.sec]+(r.n&&r.n!==SEC[r.sec]?' '+r.n:''))+'</a>').join('')+(wh.length>(big?20:4)?'ほか':'')+'</p>':'<p style="font-size:14px;color:var(--tk-sub)">いまの本文には この語は出てきません</p>')
+  +(t.rel?'<p style="font-size:15px">あわせて：'+t.rel.map(w=>{const j=D.terms.findIndex(x=>x.w===w);return j<0?'':'<a href="#" class="tk-w" data-t="'+j+'" style="margin-right:10px">'+esc(w)+'</a>';}).join('')+'</p>':'');
+}
+function renderTerm(){
+ const GYO=[['あ','あいうえお'],['か','かきくけこがぎぐげご'],['さ','さしすせそざじずぜぞ'],['た','たちつてとだぢづでど'],['な','なにぬねの'],['は','はひふへほばびぶべぼぱぴぷぺぽ'],['ま','まみむめも'],['や','やゆよ'],['ら','らりるれろ'],['わ','わをん']];
+ let cur='';
+ $('tk-nav').innerHTML=ORDER.map(i=>{const g=(GYO.find(x=>x[1].includes(D.terms[i].yomi[0]))||['他'])[0];let h='';if(g!==cur){cur=g;h='<h2>'+g+'行</h2>';}
+  return h+'<button data-t="'+i+'" aria-pressed="'+(S.term===i)+'">'+esc(D.terms[i].w)+'</button>';}).join('');
+ $('tk-ttl').innerHTML='<b>用語</b><span>学習指導要領と解説の ことば（解説をもとに 短く まとめたもの）</span>';
+ $('tk-list').innerHTML=ORDER.map(i=>'<div id="t'+i+'" class="tk-card tk-ent'+(S.term===i?' on':'')+'">'+termHTML(i,true)+'</div>').join('');
+ const el=$('t'+S.term);if(el)el.scrollIntoView({block:'start'});
+}
+/* ---------- さがす（辞典）---------- */
+function renderFind(){
+ const q=S.q,has=s=>s&&s.includes(q);
+ $('tk-nav').innerHTML='';
+ const g=(name,arr)=>arr.length?'<div class="tk-grp">'+name+'</div>'+arr.join(''):'';
+ const res=(go,w,t)=>'<button class="tk-res" data-go="'+go+'"><span class="w">'+esc(w)+'</span>'+deco(t)+'</button>';
+ const cut=t=>{const k=t.indexOf(q);return (k>40?'…':'')+t.slice(Math.max(0,k-40),k+80)+(t.length>k+80?'…':'');};
+ const terms=D.terms.map((t,i)=>(has(t.w)||has(t.yomi)||has(t.t))?res('t'+i,'用語',t.w+'：'+cut(t.t)):'').filter(Boolean);
+ const now=Object.values(NOW).filter(r=>has(full(r))).map(r=>res(r.id,'いまの本文　'+label(r),cut(full(r).replace(/\n/g,' '))));
+ const old=D.pairs.filter(p=>(p.old||[]).some(i=>has(full(OLD[i])))).map(p=>{const r=OLD[p.old.find(i=>has(full(OLD[i])))];return res('p'+p.i,'前回の本文（平成20年）　'+label(r),cut(full(r).replace(/\n/g,' ')));});
+ const hist=D.hist.map((y,i)=>{const t=[y.name,...y.parts,...y.points].find(has);return t?res('y'+i,'歩み　'+y.year,cut(t)):'';}).filter(Boolean);
+ const nx=D.next.items.filter(x=>has(x.t)).map(x=>res('next','次の改訂',cut(x.t)));
+ const all=g('用語',terms)+g('いまの本文',now)+g('前回の本文',old)+g('歩み',hist)+g('次の改訂',nx);
+ $('tk-ttl').innerHTML='<b>「'+esc(q)+'」</b><span>本文・前回・歩み・次の改訂・用語から さがしました</span>';
+ $('tk-list').innerHTML=all||'<div class="tk-none">見つかりませんでした</div>';
+}
+/* ---------- まとめて描く ---------- */
+function render(){
+ [...$('tk-mode').children].forEach(b=>b.setAttribute('aria-pressed',!S.q&&b.dataset.m===S.mode));
+ if(S.q)renderFind();else({now:renderNow,cmp:renderCmp,hist:renderHist,next:renderNext,term:renderTerm})[S.mode]();
+ $('tk-foot').hidden=S.mode!=='now'&&!S.pick.length;
+ const ps=S.pick.map(c=>NOW[c]);
+ $('tk-picked').textContent=ps.length?'選んだもの：'+ps.map(label).join('／'):'項目の右の □ を押すと、指導案に写せます';
+ $('tk-clear').disabled=$('tk-copy').disabled=$('tk-send').disabled=!ps.length;
+ $('tk-src').textContent='出典：'+(S.mode==='cmp'?D.src.old+'／':'')+D.src.now+(S.mode==='hist'||S.mode==='next'||S.mode==='term'?'／'+D.src_extra:'');
+ save();
+}
+function showCard(i){S.card=i;$('tk-card').innerHTML='<button class="x" aria-label="とじる">×</button>'+termHTML(i);$('tk-card').hidden=false;}
+function go(to){
+ S.q='';$('tk-q').value='';$('tk-qx').hidden=true;$('tk-card').hidden=true;
+ if(to[0]==='t'&&!NOW[to]){S.mode='term';S.term=+to.slice(1);render();return;}
+ if(to[0]==='p'){const p=D.pairs[+to.slice(1)];S.mode='cmp';S.sec=p.sec;S.onlyChg=false;S.hit=to;render();}
+ else if(to[0]==='y'){S.mode='hist';render();S.hit='';}
+ else if(to==='next'||to==='cmp'||to==='hist'){S.mode=to;render();return;}
+ else if(NOW[to]){S.mode='now';S.sec=NOW[to].sec;S.hit=to;render();to='r'+to;}
+ const el=$(to);if(el)el.scrollIntoView({block:'center'});
+}
+function open(code){if(NOW[code])go(code);}
+
+/* ---------- 押したとき ---------- */
+$('tk-mode').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.mode=b.dataset.m;S.q='';$('tk-q').value='';$('tk-qx').hidden=true;S.hit='';$('tk-card').hidden=true;render();$('tk-list').scrollTop=0;};
+$('tk-nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.s){S.sec=b.dataset.s;S.q='';$('tk-q').value='';$('tk-qx').hidden=true;S.hit='';render();$('tk-list').scrollTop=0;}
+ else if(b.dataset.y){if(S.fig){S.fig=false;render();}$('y'+b.dataset.y).scrollIntoView({block:'start',behavior:'smooth'});}
+ else if(b.dataset.t){S.term=+b.dataset.t;render();}};
+$('tk-ttl').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='tk-fig1'||b.id==='tk-fig0'){S.fig=b.id==='tk-fig1';render();$('tk-list').scrollTop=0;return;}if(b.id==='tk-mark')S.mark=!S.mark;if(b.id==='tk-only')S.onlyChg=!S.onlyChg;render();};
+document.addEventListener('click',e=>{
+ const w=e.target.closest('a.tk-w');if(w){e.preventDefault();if(S.mode==='term'&&!S.q){S.term=+w.dataset.t;render();}else showCard(+w.dataset.t);return;}
+ const c=e.target.closest('a.tk-cmp,button.tk-res');if(c){e.preventDefault();go(c.dataset.p!=null?'p'+c.dataset.p:c.dataset.go);return;}
+ if(e.target.closest('#tk-card .x')){$('tk-card').hidden=true;return;}
+ const sg=e.target.closest('button.sg');if(sg){S.fig=false;render();const el=$('y'+sg.dataset.y);if(el)el.scrollIntoView({block:'start'});return;}
+ const k=e.target.closest('button.tk-ck');if(k){const id=k.dataset.c,i=S.pick.indexOf(id);i<0?S.pick.push(id):S.pick.splice(i,1);S.hit='';const y=$('tk-list').scrollTop;render();$('tk-list').scrollTop=y;}
+});
+$('tk-q').oninput=e=>{S.q=e.target.value.trim();$('tk-qx').hidden=!S.q;$('tk-card').hidden=true;render();$('tk-list').scrollTop=0;};
+$('tk-qx').onclick=()=>{$('tk-q').value='';S.q='';$('tk-qx').hidden=true;render();$('tk-q').focus();};
+function toast(t){$('tk-toast').textContent=t;$('tk-toast').hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>$('tk-toast').hidden=true,2200);}
+const items=()=>S.pick.map(c=>({code:c,label:label(NOW[c]),text:NOW[c].t||NOW[c].h}));
+$('tk-clear').onclick=()=>{S.pick=[];render();};
+$('tk-copy').onclick=()=>{const t=items().map(x=>x.label+'\n'+x.text).join('\n\n');
+ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('写しました。指導案に はりつけできます'),()=>toast('写せませんでした'));};
+$('tk-send').onclick=()=>{const m={type:'yoryo-pick',src:D.src.now,items:items()};
+ if(window.parent!==window){window.parent.postMessage(m,'*');toast('授業メイトへ わたしました');}else toast('授業メイトの中で ひらくと わたせます');};
+window.addEventListener('message',e=>{const d=e.data||{};if(d.type==='yoryo-open')open(d.code);});
+window.DY_YORYO={open,get:c=>NOW[c]?{code:c,label:label(NOW[c]),text:NOW[c].t||NOW[c].h}:null};
+const h=decodeURIComponent(location.hash.slice(1));
+if(NOW[h])go(h);else render();
+})();
+</script>
+</body></html>
