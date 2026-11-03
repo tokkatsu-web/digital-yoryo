@@ -169,7 +169,7 @@ mark{background:#fff0a8;color:inherit}
   <span class="dy-picked" id="dy-picked"></span>
   <button id="dy-clear" disabled>はずす</button>
   <button id="dy-copy" disabled><svg class="dy-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg> 写す</button>
-  <button id="dy-send" class="dy-main" disabled>授業メイトへ</button>
+  <button id="dy-send" class="dy-main" disabled hidden>授業メイトへ</button>
  </div>
  <div class="dy-src" id="dy-src"></div>
 </div>
@@ -1104,12 +1104,12 @@ $('dy-clear').addEventListener('click',()=>{S.pick=[];render();});
 $('dy-copy').addEventListener('click',()=>{
  const t=S.mode==='unit'?unitText()+'\n'+unitAims().map(p=>(p.main?'◎':'○')+p.label+'　'+p.text).join('\n'):picked().map(p=>p.label+'　'+p.text).join('\n');
  copyText(t).then(()=>toast('写しました。指導案に はりつけられます'));});
-// 授業メイトへ：学校の Google（GAS）の授業メイトの中で開いたときだけ親に渡す。見本では渡す中身を写す。
-const inMate=window.parent!==window&&/script\.google|googleusercontent/.test(document.referrer||'');
+// 授業メイトへ：授業メイトの画面が {type:'yoryo-hello'} か yoryo-open を送ってきたときだけ、ボタンを出してその画面に渡す。
+// 受け手がいないのに「送りました」と出さないため、それまでボタンは隠しておく。
+let mate=null;
 $('dy-send').addEventListener('click',()=>{
  const msg=S.mode==='unit'?{type:'yoryo-unit',src:D.src,grade:+S.grade,unit:U.grades[S.grade][S.ui].unit,title:U.grades[S.grade][S.ui].title,items:unitAims()}:{type:'yoryo-pick',src:D.src,items:picked()};
- if(inMate){window.parent.postMessage(msg,'*');toast('授業メイトへ送りました');}
- else copyText(JSON.stringify(msg)).then(()=>toast('見本なので、送る中身を写しました'));
+ if(mate){mate.postMessage(msg,'*');toast('授業メイトへ送りました');}
 });
 // コードを付けて開くと、その項目を出す（#82102D3231400000）
 function openCode(c){
@@ -1118,10 +1118,13 @@ function openCode(c){
  const el=document.querySelector('[data-c="'+c+'"]');if(el)el.scrollIntoView({block:'center'});
  return true;
 }
-const fromHash=()=>openCode(decodeURIComponent(location.hash.slice(1)));
+// GAS の授業メイトから ?a=yoryo&tangen=コード で開くと、#tangen=コード になって届く
+const fromHash=()=>openCode(decodeURIComponent(location.hash.slice(1)).replace(/^tangen=/,''));
 window.addEventListener('hashchange',fromHash);
-// 授業メイトの中に入れたとき：{type:'yoryo-open',code:'82102D3231400000'} で開く
-window.addEventListener('message',e=>{if(e.data&&e.data.type==='yoryo-open')openCode(e.data.code);});
+// 授業メイトの中に入れたとき：{type:'yoryo-open',code:'82102D3231400000'} で開く。{type:'yoryo-hello'} は渡す先を知らせるだけ
+window.addEventListener('message',e=>{const t=e.data&&e.data.type;if(t!=='yoryo-open'&&t!=='yoryo-hello')return;
+ if(e.source&&e.source!==window){mate=e.source;$('dy-send').hidden=false;}
+ if(t==='yoryo-open')openCode(e.data.code);});
 const SRC='出典：文部科学省「学習指導要領コード」（小学校 平成29年・平成20年告示、中学校 平成29年告示）'+(HAS_U?'／光村図書「年間指導計画例（令和6年度版）」':'');
 $('dy-src').textContent=SRC;
 render();fromHash();
